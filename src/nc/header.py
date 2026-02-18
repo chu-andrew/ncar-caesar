@@ -4,7 +4,7 @@ import sys
 import polars as pl
 from netCDF4 import Dataset
 
-from loader import load_dataset
+from nc.loader import load_dataset
 
 
 def read_variables(ds: Dataset, verbose: bool = False) -> pl.DataFrame:

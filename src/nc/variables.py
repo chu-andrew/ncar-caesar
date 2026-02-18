@@ -3,8 +3,8 @@
 import os
 import sys
 
-from header import export_csv, read_variables
-from loader import PROJECT_ROOT, list_files, load_dataset
+from nc.header import export_csv, read_variables
+from nc.loader import PROJECT_ROOT, list_files, load_dataset
 
 
 def group_by_variables(dataset_id: str) -> dict[frozenset[str], list[str]]:
