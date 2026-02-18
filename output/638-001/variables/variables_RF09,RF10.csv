@@ -1,0 +1,314 @@
+variable,long_name,units
+A2DCA_RPC,"Fast 2DC Corrected Accumulation per Channel, All Particles",count
+A2DCR_RPC,"Fast 2DC Corrected Accumulation per Channel, Round Particles",count
+ABSPEC_VXL,VCSEL Absorbption Spectrum,count
+ACDP_LWI,CDP Raw Accumulation (per cell),count
+ACDP_LWO,CDP Raw Accumulation (per cell),count
+ADIFR,"Vertical Differential Pressure, Radome",hPa
+AKRD,"Attack Angle, Radome Diff. Pressure",degree
+AKY,"Attack Angle, Radome Diff. Pressure",degree
+AREA_RPC,Fast 2DC Total Area of Shadowed Pixels,mm2
+AS200_RWO,SPP-200 (PCASP) Raw Accumulation (per cell) - DMT,count
+ASTAT,W-CCN status,V
+ATF1,"Ambient Temperature, Unheated",deg_C
+ATTACK,"Attack Angle, Radome Diff. Pressure",degree
+ATX,"Ambient Temperature, Deiced Left",deg_C
+AUHSAS_WYO,UHSAS Raw Count Histogram,count
+AVGTRNS_LWI,CDP Average Transit Time,microsecond
+AVGTRNS_LWO,CDP Average Transit Time,microsecond
+BDIFR,"Horizontal Differential Pressure, Radome",hPa
+BYPFLW_CVI,CVI Bypass Flow,slpm
+C2DCA_RPC,"Fast 2DC Concentration per Channel, All Particles",#/L
+C2DCR_RPC,"Fast 2DC Concentration per Channel, Round Particles",#/L
+CAVP_WVISO1,Cavity Pressure,torr
+CAVP_WVISO2,Cavity Pressure,torr
+CAVT_WVISO1,Cavity Temperature,deg_C
+CAVT_WVISO2,Cavity Temperature,deg_C
+CCDP_LWI,CDP Concentration (per cell),#/cm3
+CCDP_LWO,CDP Concentration (per cell),#/cm3
+CDP016,CDP_LWI arithmetic midpoint bin size in diameter,um
+CDP016_bnds,lower and upper bounds for CDP_LWI,um
+CDP058,CDP_LWO arithmetic midpoint bin size in diameter,um
+CDP058_bnds,lower and upper bounds for CDP_LWO,um
+CDP5VMON_LWI,CDP 5 Vdc Monitor,Vdc
+CDP5VMON_LWO,CDP 5 Vdc Monitor,Vdc
+CFCNTS_CFDC,CFDC Total Count,count
+CNTEMP,BCN Counter Inlet Temperature,deg_C
+CNTS,TSI CN Counter Output,count
+CONC2DCA_RPC,"Total Fast 2DC Concentration, All Particles",#/L
+CONC2DCR_RPC,"Total Fast 2DC Concentration, Round Particles",#/L
+CONCD_LWI,CDP Concentration (all cells),#/cm3
+CONCD_LWO,CDP Concentration (all cells),#/cm3
+CONCN,Condensation Nuclei (CN) Concentration,#/cm3
+CONCP_RWO,PCAS Concentration (all cells),#/cm3
+CONCU100_WYO,"UHSAS Concentration within the optical blo, .1 micron and bigger",#/cm3
+CONCU500_WYO,"UHSAS Concentration within the optical blo, .5 micron and bigger",#/cm3
+CONCU_WYO,UHSAS Concentration within the optical block(all cells),#/cm3
+CONCV_VXL,VCSEL Moisture Number Density,#/cm3
+CO_ARI,volume_mixing_ratio_of_carbon_monoxide_in_dry_air,ppbv
+CS200_RWO,SPP-200 (PCASP) Concentration (per cell) - DMT,#/cm3
+CT2_CFDC,CFDC Aerosol Location Temperature,deg_C
+CUHSAS_WYO,UHSAS Concentration within the optical block (per cell),#/cm3
+CWC_WVISO1,condensed water content,g/m3
+DAST_WVISO1,DAS Temperature,deg_C
+DAST_WVISO2,DAS Temperature,deg_C
+DATE_RPC,Fast 2DC Date / Time Stamp,count
+DBAR2DCA_RPC,"Fast 2DC Mean Particle Diameter, All Particles",um
+DBAR2DCR_RPC,"Fast 2DC Mean Particle Diameter, Round Particles",um
+DBARD_LWI,CDP Mean Particle Diameter,um
+DBARD_LWO,CDP Mean Particle Diameter,um
+DBARP_RWO,PCAS Mean Particle Diameter,um
+DBARU_WYO,UHSAS Mean Particle Diameter,um
+DBZ2DCA_RPC,"Fast 2DC Calculated Reflectivity, All Particles",dBZ
+DBZ2DCR_RPC,"Fast 2DC Calculated Reflectivity, Round Particles",dBZ
+DBZD_LWI,CDP Calculated Reflectivity,dBZ
+DBZD_LWO,CDP Calculated Reflectivity,dBZ
+DCUT50_CVI,CVI D Cut 50 um,units
+DIOV01_RPC,"Fast 2DC Diode Voltage, Diode 1",Vdc
+DIOV32_RPC,"Fast 2DC Diode Voltage, Diode 32",Vdc
+DIOV64_RPC,"Fast 2DC Diode Voltage, Diode 64",Vdc
+DISP2DCA_RPC,"Fast 2DC Dispersion, All Particles",none
+DISP2DCR_RPC,"Fast 2DC Dispersion, Round Particles",none
+DISPD_LWI,CDP Dispersion (sigma/dbarx),none
+DISPD_LWO,CDP Dispersion (sigma/dbarx),none
+DISPP_RWO,PCAS Dispersion (sigma/dbarx),none
+DISPU_WYO,UHSAS Dispersion (sigma/dbarx),none
+DPXC,Dew/Frost Point Temperature,deg_C
+DP_DPB,Dew/Frost Point Temperature,deg_C
+DP_DPT,Dew/Frost Point Temperature,deg_C
+DP_VXL,Dew/Frost Point Temperature,deg_C
+DRFTA,IRS Drift Angle,degree
+DRYFLW_CVI,CVI Flow Dry,slpm
+DTEMP,W-CCN plate temperature diff,V
+DVALUE,D-VALUE (GGALT - PALT),m
+EWX,Ambient Water Vapor Pressure (VCSEL),hPa
+EW_DPB,Ambient Water Vapor Pressure,hPa
+EW_DPT,Ambient Water Vapor Pressure,hPa
+EW_VXL,Ambient Water Vapor Pressure (VCSEL),hPa
+F2DC001_P2D,"",""
+F2DS020_P2D,F2DS arithmetic midpoint bin size in diameter,um
+FCN,Raw BCN Counter Sample Flow Rate,vlpm
+FCNC,Corrected BCN Counter Sample Flow Rate,vlpm
+FILTER_CFDC,CFDC Filter (ON=1),bool
+FLOW_SDI,SDI Volumetric Flow,vlpm
+FO3C_ACOM,volume_mixing_ratio_of_ozone_in_dry_air,ppbv
+FO3_ACOM,Fast Response Ozone Mixing Ratio,ppbv
+GEOPTH,Geopotential height [MSL],m
+GGALT,Reference GPS Altitude (MSL),m
+GGALTSD,Standard Deviation of Reference GPS Altitude (MSL),m
+GGDAGE,Time in seconds since last DGPS update,s
+GGEOIDHT,Reference GPS Height of geoid (MSL) above WGS84 ellipsoid,m
+GGLAT,Reference GPS Latitude,degree_N
+GGLATSD,Standard Deviation of Reference GPS Latitude,m
+GGLON,Reference GPS Longitude,degree_E
+GGLONSD,Standard Deviation of Reference GPS Longitude,m
+GGNSAT,Reference GPS number of satellites used in solution,number
+GGNSATL1,Reference GPS number of satellites with L1/E1/B1 signals used in solution,number
+GGNSATMULTI,Reference GPS number of satellites with multi-frequency signals used in solution,number
+GGNSATTRK,Reference GPS number of satellites tracked,number
+GGQUAL,"Reference GPS Qual, 0=inval,1=GPS,2=DGPS,5=FRTK",none
+GGREFID,DGPS station ID number,none
+GGSPD,Reference GPS Ground Speed,m/s
+GGSTATUS,"Reference GPS rcvr status: 1=OK(A), 0=warning(V)",none
+GGTRK,Reference GPS Track Angle,degree_T
+GGVEW,"Reference GPS Ground Speed Vector, East Component",m/s
+GGVNS,"Reference GPS Ground Speed Vector, North Component",m/s
+GGVSPD,Reference GPS Vertical Speed,m/s
+GSPD,IRS Aircraft Ground Speed,m/s
+H2O_ARI,volume_mixing_ratio_of_water_in_dry_air,ppmv
+H2O_WVISO1,wet mole fraction of target water phase(s),ppmv
+H2O_WVISO2,wet mole fraction of target water phase(s),ppmv
+HGM232,Altitude above ground (radar altimeter),feet
+HVPS315_P2D,HVPS arithmetic midpoint bin size in diameter,um
+I2DCA_RPC,"Interarrival Time Accumulation, All Particles Including Rejectio",count
+IAS,Indicated Airspeed,knot
+ICOLLWC_NEV,Nevzorov LWC collector current,A
+ICOLTWC_NEV,Nevzorov TWC collector current,A
+INC_CFDC,CFDC IN Count,count
+IRBC,"Corrected Infrared Irradiance, Bottom",W/m2
+IRBHT,"Pyrgeometer (IR) Housing Temperature, Bottom",deg_C
+IREFLWC_NEV,Nevzorov LWC reference current,A
+IREFTWC_NEV,Nevzorov TWC reference current,A
+IRTC,"Corrected Infrared Irradiance, Top",W/m2
+IRTHT,"Pyrgeometer (IR) Housing Temperature, Top",deg_C
+LAT,IRS Latitude,degree_N
+LATC,GPS-Corrected Inertial Latitude,degree_N
+LON,IRS Longitude,degree_E
+LONC,GPS-Corrected Inertial Longitude,degree_E
+MACHFR,"Aircraft Mach Number, Fuselage Right",none
+MACHX,"Aircraft Mach Number, Fuselage Right",none
+MFLOW_SDI,SDI Mass Flow,slpm
+MODE_VXL,VCSEL Mode,none
+MR,"Mixing Ratio, T-Electric",gram/kg
+N2O_ARI,volume_mixing_ratio_of_nitrous_oxide_in_dry_air,ppbv
+NACCEPT2DCA_RPC,"Number of Fast 2DC Particles Accepted, All Particles",count
+NACCEPT2DCR_RPC,"Number of Fast 2DC Particles Accepted, Round Particles",count
+NREJECT2DCA_RPC,"Number of Fast 2DC Particles Rejected, All Particles",count
+NREJECT2DCR_RPC,"Number of Fast 2DC Particles Rejected, Round Particles",count
+ONE,Constant value of 1.,none
+OVFLW_LWI,CDP AtoD Converter Overflow/Overrange,count
+OVFLW_LWO,CDP AtoD Converter Overflow/Overrange,count
+PALT,NACA Pressure Altitude,m
+PALTF,NACA Pressure Altitude,feet
+PBYP_CVI,CVI Bypass Pressure,hpa
+PCAB,Interior Cabin Static Pressure,hPa
+PCAB_WVISO1,Ambient Pressure,torr
+PCAB_WVISO2,Ambient Pressure,torr
+PCAS108,S200_RWO arithmetic midpoint bin size in diameter,um
+PCAS108_bnds,lower and upper bounds for S200_RWO,um
+PCN,BCN Counter Inlet Pressure,hPa
+PDRY,Power Dry Calculated,W
+PFLWC_RWO,PCAS Corrected Flow,vol cm3/s
+PFLWS_RWO,SPP-200 Sheath Flow,std cm3/s
+PFLW_RWO,SPP-200 Flow,std cm3/s
+PHGB_RWO,SPP-200 High-Gain Baseline,V
+PITCH,IRS Aircraft Pitch Angle,degree
+PLGB_RWO,SPP-200 Low-Gain Baseline,V
+PLWC2DCA_RPC,"Fast 2DC Liquid Water Content, All Particles",g m-3
+PLWC2DCR_RPC,"Fast 2DC Liquid Water Content, Round Particles",g m-3
+PLWCC,Corrected PMS-King Liquid Water Content,g m-3
+PLWCD_LWI,CDP Water/Ice Content,g m-3
+PLWCD_LWO,CDP Water/Ice Content,g m-3
+PMGB_RWO,SPP-200 Mid-Gain Baseline,V
+PONB_CVI,CVI Pressure ONB,hpa
+PREF_RWO,SPP-200 Laser Reference Voltage,V
+PREGAIN_VXL,VCSEL Pre Gain,count
+PSAMP_CVI,CVI Sample Pressure,hpa
+PSFC,"Corrected Static Pressure, Fuselage",hPa
+PSFD,"Raw Static Pressure, Fuselage",hPa
+PSFDC,"Corrected Static Pressure, Fuselage Digital",hPa
+PSFRD,"Raw Static Pressure, Fuselage",hPa
+PSURF,Calculated Surface Pressure,hPa
+PSX,"Raw Static Pressure, Fuselage",hPa
+PSXC,"Corrected Static Pressure, Fuselage",hPa
+PTMP_RWO,SPP-200 Detector Temperature,deg_C
+PUSER_CVI,CVI User Pressure,hpa
+PVOLP_RWO,PCASP Equivalent Volume,um3/m3
+PVOLU_WYO,UHSAS Equivalent Volume,um3/m3
+P_ARI,Aerodyne Mini 108 Pressure,Torr
+P_CFDC,CFDC Pressure,hPa
+P_SDI,SDI Flowmeter Absolute Pressure,mb
+QCFC,"Corrected Dynamic Pressure, Fuselage",hPa
+QCFR,"Raw Dynamic Pressure, Fuselage Right",hPa
+QCFRC,"Raw Dynamic Pressure, Fuselage Right, Corrected",hPa
+QCRC,"Corrected Dynamic Pressure, Radome",hPa
+QCX,"Raw Dynamic Pressure, Fuselage Right",hPa
+QCXC,"Raw Dynamic Pressure, Fuselage Right, Corrected",hPa
+RALT,Geometric (Radar) Altitude (APN-232),m
+REFF2DCA_RPC,"Fast 2DC Effective Radius, All Particles",um
+REFF2DCR_RPC,"Fast 2DC Effective Radius, Round Particles",um
+REFFD_LWI,CDP Effective Diameter,um
+REFFD_LWO,CDP Effective Diameter,um
+REJDOF_LWI,CDP Rejected Particle Count (Outside Depth-of-Field),count
+REJDOF_LWO,CDP Rejected Particle Count (Outside Depth-of-Field),count
+RHODT,"Absolute Humidity, T-Electric",g m-3
+RHUM,Relative Humidity,%
+RICE,Raw Icing-Rate Indicator,V
+ROLL,IRS Aircraft Roll Angle,degree
+RPS_RPC,Fast 2DC Records per Second,count
+RSTB,Radiometric Surface Temperature,deg_C
+RSTB1,Radiometric Surface Temperature,deg_C
+RSTT,Radiometric Sky/Cloud-Base Temperature,deg_C
+RTF1,"Recovery Air Temperature, ADS Rack",deg_C
+RTX,"Recovery Air Temperature, Heated Left",deg_C
+SAT_CFDC,CFDC Saturation Water,%
+SDIQUAL_SDI,"SDI data quality flag (1=isokinetic,0=anisokinetic)",bool
+SETPT_SDI,SDI Mass Flow Set Point,slpm
+SFLOW_CFDC,CFDC Sheath Flow,L/min
+SOLAZ,Solar Azimuth Angle,radian
+SOLDE,Solar Declination Angle,radian
+SOLEL,Solar Elevation Angle,radian
+SOLZE,Solar Zenith Angle,radian
+SPHUM,Specific Humidity,gram/kg
+SSLIP,"Sideslip Angle, Reference",degree
+SSRD,"Sideslip Angle, Radome Diff. Pressure",degree
+TACTU_WYO,UHSAS Total Counts (all cells),count
+TASDRY,"Aircraft True Airpseed, Dry Air",m/s
+TASFLG,True Airpseed Humidity Correction Flag,bool
+TASFR,"Aircraft True Airspeed, Fuselage Right",m/s
+TASX,"Aircraft True Airspeed, Reference",m/s
+TAS_RPC,Fast 2DC Diode TAS,m/s
+TBACK_CVI,CVI Temperature back,deg_C
+TCNTD_LWI,CDP Total Counts (all cells),count
+TCNTD_LWO,CDP Total Counts (all cells),count
+TCNTP_RWO,PCAS Total Counts (all cells),count
+TCNTU_WYO,UHSAS Total Counts (all cells),count
+TEXT_CVI,CVI External Temperature,deg_C
+TFAN_CVI,CVI Fan Temperature,deg_C
+TFLOW_CFDC,CFDC Total Flow,L/min
+THDG,IRS Aircraft True Heading Angle,degree_T
+THETA,Potential Temperature,K
+THETAE,Equivalent Potential Temperature,K
+THETAP,Pseudo-adiabatic Equivalent Potential Temperature,K
+THETAQ,Wet Equivalent Potential Temperature,K
+THETAV,Virtual Potential Temperature,K
+TKAT,IRS Aircraft Track Angle,degree_T
+TOPTMP,W-CCN top plate temperature,V
+TRSTB,RSTB Sensor Heater Unit Settings,deg_C
+TVIR,Virtual Temperature,deg_C
+TWC_WVISO2,total water content,g/m3
+T_ARI,Aerodyne Mini 108 Temperature,K
+T_SDI,SDI Flowmeter Air Temperature,deg_C
+Time,time of measurement,seconds since 2024-04-02 00:00:00 +0000
+UACC_WYO,UHSAS Accumulation,sec
+UCURR_WYO,UHSAS Laser Current,V
+UFLWC_WYO,UHSAS Sample Flow at Ambient Conditions,vol cm3/s
+UFT_4,Under Floor Temperature,deg_C
+UHSAS011,UHSAS_WYO arithmetic midpoint bin size in diameter,um
+UHSAS011_bnds,lower and upper bounds for UHSAS_WYO,um
+UIC,"GPS-Corrected Wind Vector, East Component",m/s
+ULSRTEMP_WYO,UHSAS Laser Temperature,V
+UPRESS_WYO,UHSAS Absolute Pressure,kPa
+UPRGFLW_WYO,UHSAS Purge Flow,sccm
+UREF_WYO,UHSAS Reference Intensity,V
+USCAT_WYO,UHSAS Background Scatter,V
+USHFLW_WYO,UHSAS Air Sheath Flow,sccm
+USMPFLW_WYO,UHSAS Sample Flow,sccm
+USRFLW_CVI,CVI User Flow,slpm
+UTMP_WYO,UHSAS Absolute Temperature,K
+UTSEC_GPDACQ_319,Time; Seconds Since Midnight,seconds
+UTSEC_TDACQ_321,Time; Seconds Since Midnight,seconds
+UXC,"GPS-Corrected Wind Vector, Longitudinal Component",m/s
+VCOLLWC_NEV,Nevzorov LWC collector voltage,V
+VCOLTWC_NEV,Nevzorov TWC collector voltage,V
+VDET,W-CCN detector,V
+VEW,"IRS Ground Speed Vector, East Component",m/s
+VEWC,"GPS-Corrected Inertial Ground Speed Vector, East Component",m/s
+VIC,"GPS-Corrected Wind Vector, North Component",m/s
+VISBC,"Corrected Visable Irradiance, Bottom",W/m2
+VISBHT,"Pyrgeometer (Visible) Housing Temperature, Bottom",V
+VISTC,"Corrected Visable Irradiance, Top",W/m2
+VISTHT,"Pyrgeometer (Visible) Housing Temperature, Top",V
+VMR_VXL,Volume Mixing Ratio,ppmv
+VNS,"IRS Ground Speed Vector, North Component",m/s
+VNSC,"GPS-Corrected Inertial Ground Speed Vector, North Component",m/s
+VREFLWC_NEV,Nevzorov LWC reference voltage,V
+VREFTWC_NEV,Nevzorov TWC reference voltage,V
+VSPD,IRS Vertical Speed,m/s
+VYC,"GPS-Corrected Wind Vector, Lateral Component",m/s
+WDC,GPS-Corrected Horizontal Wind Direction,degree_T
+WIC,"GPS-Corrected Wind Vector, Vertical Gust Component",m/s
+WINDSFLG,"Winds Quality (0=good, 1-3=bad inputs, 4-6=icing)",none
+WIX,"GPS-Corrected Wind Vector, Vertical Gust Component",m/s
+WIY,"GPS-Corrected Wind Vector, Vertical Gust Component",m/s
+WSC,GPS-Corrected Horizontal Wind Speed,m/s
+XICN,BCN Isokinetic Side Flow Rate,vlpm
+XICNC,Corrected CN Isokinetic Side Flow Rate,vlpm
+ZERO,Constant value of 0.,none
+cutsize_CVI,CVI cut size,micrometers
+d18O_WVISO1,oxygen water isotope ratio (units permil),1e-3
+d18O_WVISO2,oxygen water isotope ratio (units permil),1e-3
+dD_WVISO1,hydrogen water isotope ratio (units permil),1e-3
+dD_WVISO2,hydrogen water isotope ratio (units permil),1e-3
+enhancement_CVI,CVI enhancement factor,""
+excess_CVI,CVI counterflow exess,SLPM
+flow_CVI,CVI inlet flow,SLPM
+interarrival_endpoints,"",""
+mr_WVISO1,mixing ratio,g/kg
+mr_WVISO2,total water mixing ratio,g/kg
+quality_CVI,measurement quality flag,""
+quality_WVISO1,measurement quality flag,""
+quality_WVISO2,measurement quality flag,""
+target_CVI,measurement target flag,""
+target_WVISO1,measurement target flag,""
+target_WVISO2,measurement target flag,""
