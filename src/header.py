@@ -1,6 +1,7 @@
+import os
 import sys
-import polars as pl
 
+import polars as pl
 from netCDF4 import Dataset
 
 from loader import load_dataset
@@ -35,6 +36,13 @@ def read_globals(ds: Dataset, verbose: bool = False) -> pl.DataFrame:
             row["type"] = type(val).__name__
         rows.append(row)
     return pl.DataFrame(rows)
+
+
+def export_csv(df: pl.DataFrame, path: str) -> None:
+    """Write a Polars DataFrame to a CSV file, creating parent dirs if needed."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    df.write_csv(path)
+    print(f"Exported: {path}")
 
 
 def print_variables(ds: Dataset, verbose: bool = False) -> None:
