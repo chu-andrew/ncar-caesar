@@ -1,0 +1,7 @@
+[project]
+name = "ncar-caesar"
+version = "0.1.0"
+description = "CAESAR"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
