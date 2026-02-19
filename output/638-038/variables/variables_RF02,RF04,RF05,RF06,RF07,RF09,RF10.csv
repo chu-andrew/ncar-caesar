@@ -1,0 +1,18 @@
+variable,long_name,units
+LWP,Liquid Water Path,g/m2
+LWP_std,Liquid Water Path Standard Deviation,g/m2
+WVP,Water Vapor Path,g/m2
+WVP_std,Water Vapor Path Standard Deviation,g/m2
+TB14,183.31 +/- 14GHz Brightness Temperature,K
+TB7,183.31 +/- 7GHz Brightness Temperature,K
+TB3,183.31 +/- 3GHz Brightness Temperature,K
+TB1,183.31 +/- 1GHz Brightness Temperature,K
+T,Flight Level Temperature,degrees C
+dewT,Flight Level Dew Point Temperature,degrees C
+alt,Altitude,m
+zenithAngle,Zenith angle of upward looking instruments,degrees
+Z,integrated reflectivity,dBZ
+time,Time,seconds since 1/1/1970 00:00:00 UTC
+GVR_osc,Are oscillations present in the GVR at this time?,True/False
+longitude,Longitude,degrees E
+latitude,Latitude,degrees N
