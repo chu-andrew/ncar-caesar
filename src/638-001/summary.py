@@ -16,6 +16,12 @@ LONGITUDE = "LONC"
 ZAXIS = "GGALT"
 TIME = "Time"
 
+# configured by feel (reference: https://data.eol.ucar.edu/project/CAESAR)
+MIN_LAT = -15
+MAX_LAT = 25
+MIN_LON = 65
+MAX_LON = 80
+
 
 def extract_hours(ds: Dataset, time_var: str) -> np.ndarray:
     """Convert time variable (seconds since midnight) to UTC hours."""
@@ -36,11 +42,7 @@ def plot_altitude(ds: Dataset, ax: plt.Axes, flight_label: str) -> None:
     ax.set_title(f"{flight_label} Altitude Profile")
 
 
-def plot_ground_track(ds: Dataset, ax: plt.Axes, label: str) -> None:
-    lat = ds[LATITUDE][:]
-    lon = ds[LONGITUDE][:]
-
-    # background
+def setup_map(ax: plt.Axes) -> None:
     ax.add_feature(
         cfeature.OCEAN.with_scale("50m"), facecolor=cartopy.feature.COLORS["water"]
     )
@@ -54,13 +56,17 @@ def plot_ground_track(ds: Dataset, ax: plt.Axes, label: str) -> None:
     gl.top_labels = False
     gl.right_labels = False
 
-    # flight track
-    ax.plot(lon, lat, transform=ccrs.PlateCarree(), linewidth=1.0, color="r")
-
     # NB: hardcoded boundaries
-    ax.set_extent([-15, 25, 65, 80], crs=ccrs.PlateCarree())
+    ax.set_extent([MIN_LAT, MAX_LAT, MIN_LON, MAX_LON], crs=ccrs.PlateCarree())
     ax.set_aspect("auto")
 
+
+def plot_ground_track(ds: Dataset, ax: plt.Axes, label: str) -> None:
+    lat = ds[LATITUDE][:]
+    lon = ds[LONGITUDE][:]
+
+    setup_map(ax)
+    ax.plot(lon, lat, transform=ccrs.PlateCarree(), linewidth=1.0, color="r")
     ax.set_title(f"{label} Ground Track")
 
 
@@ -107,3 +113,33 @@ if __name__ == "__main__":
         print(f"Saved: {out_path}")
 
         ds.close()
+
+    # all flights map
+    map_proj = ccrs.LambertConformal(
+        central_longitude=((MAX_LAT + MIN_LAT) / 2),
+        central_latitude=((MAX_LAT + MIN_LAT) / 2),
+    )
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(1, 1, 1, projection=map_proj)
+
+    setup_map(ax)
+
+    for flight, date in FLIGHTS.items():
+        ds = load_dataset(DATASET, flight)
+        lat = ds[LATITUDE][:]
+        lon = ds[LONGITUDE][:]
+        ax.plot(
+            lon,
+            lat,
+            transform=ccrs.PlateCarree(),
+            linewidth=1.25,
+            label=f"{flight}",
+        )
+        ds.close()
+
+    ax.legend(loc="lower left", fontsize=11, framealpha=1)
+    ax.set_title("Ground track of all research flights")
+
+    out_path = os.path.join(PLOTS_DIR, "all_ground_track.png")
+    plt.savefig(out_path, dpi=200, bbox_inches="tight")
+    print(f"Saved: {out_path}")

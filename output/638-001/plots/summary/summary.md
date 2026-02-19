@@ -1,5 +1,9 @@
 # Flight Summary Plots
 
+## Ground track of all research flights
+
+![Ground Track of All Flights](all_ground_track.png)
+
 ## RF01 — 2024-02-28
 
 ![RF01 Summary](rf01_summary.png)
