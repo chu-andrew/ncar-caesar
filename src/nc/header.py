@@ -2,19 +2,24 @@ import os
 import sys
 
 import polars as pl
-from netCDF4 import Dataset
+import xarray as xr
 
 from nc.loader import load_dataset
 
 
-def read_variables(ds: Dataset, verbose: bool = False) -> pl.DataFrame:
-    """Build a Polars DataFrame describing every variable in a NetCDF Dataset."""
+def read_variables(ds: xr.Dataset, verbose: bool = False) -> pl.DataFrame:
+    """Build a Polars DataFrame describing every variable in an xarray Dataset."""
     rows = []
-    for name, var in ds.variables.items():
+    for name in ds.variables:
+        var = ds[name]
+
+        units = var.attrs.get("units", var.encoding.get("units", ""))
+        long_name = var.attrs.get("long_name", var.encoding.get("long_name", ""))
+
         row = {
             "variable": name,
-            "long_name": getattr(var, "long_name", ""),
-            "units": getattr(var, "units", ""),
+            "long_name": long_name,
+            "units": units,
         }
         if verbose:
             row["dtype"] = str(var.dtype)
@@ -23,11 +28,10 @@ def read_variables(ds: Dataset, verbose: bool = False) -> pl.DataFrame:
     return pl.DataFrame(rows)
 
 
-def read_globals(ds: Dataset, verbose: bool = False) -> pl.DataFrame:
-    """Build a Polars DataFrame of all global attributes in a NetCDF Dataset."""
+def read_globals(ds: xr.Dataset, verbose: bool = False) -> pl.DataFrame:
+    """Build a Polars DataFrame of all global attributes in an xarray Dataset."""
     rows = []
-    for attr in ds.ncattrs():
-        val = getattr(ds, attr)
+    for attr, val in ds.attrs.items():
         row = {
             "attribute": attr,
             "value": str(val),
@@ -45,13 +49,13 @@ def export_csv(df: pl.DataFrame, path: str) -> None:
     print(f"Exported: {path}")
 
 
-def print_variables(ds: Dataset, verbose: bool = False) -> None:
+def print_variables(ds: xr.Dataset, verbose: bool = False) -> None:
     df = read_variables(ds, verbose)
     with pl.Config(tbl_rows=-1, tbl_cols=-1, fmt_str_lengths=60):
         print(df)
 
 
-def print_globals(ds: Dataset, verbose: bool = False) -> None:
+def print_globals(ds: xr.Dataset, verbose: bool = False) -> None:
     df = read_globals(ds, verbose)
     with pl.Config(tbl_rows=-1, tbl_cols=-1, fmt_str_lengths=120):
         print(df)

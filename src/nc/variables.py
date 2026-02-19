@@ -13,7 +13,7 @@ def group_by_variables(dataset_id: str) -> dict[frozenset[str], list[str]]:
     groups: dict[frozenset[str], list[str]] = {}
     for f in files:
         ds = load_dataset(dataset_id, f)
-        variables = frozenset(ds.variables.keys())
+        variables = frozenset(set(ds.data_vars) | set(ds.coords))
         ds.close()
         groups.setdefault(variables, []).append(f)
     return groups

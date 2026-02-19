@@ -1,7 +1,7 @@
 import os
 from glob import glob
 
-from netCDF4 import Dataset
+import xarray as xr
 
 PROJECT_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,7 +46,7 @@ def get_file_path(dataset_id: str, filename: str) -> str:
     raise FileNotFoundError(f"No .nc file matching '{filename}' in {data_dir}")
 
 
-def load_dataset(dataset_id: str, filename: str) -> Dataset:
-    """Open a dataset's NetCDF file and return the Dataset handle."""
+def load_dataset(dataset_id: str, filename: str) -> xr.Dataset:
+    """Open a dataset's NetCDF file and return an xarray Dataset."""
     path = get_file_path(dataset_id, filename)
-    return Dataset(path)
+    return xr.open_dataset(path, decode_timedelta=True)
