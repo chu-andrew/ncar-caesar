@@ -26,9 +26,7 @@ CAVT_WVISO1,Cavity Temperature,deg_C
 CAVT_WVISO2,Cavity Temperature,deg_C
 CCDP_LWI,CDP Concentration (per cell),#/cm3
 CCDP_LWO,CDP Concentration (per cell),#/cm3
-CDP016,CDP_LWI arithmetic midpoint bin size in diameter,um
 CDP016_bnds,lower and upper bounds for CDP_LWI,um
-CDP058,CDP_LWO arithmetic midpoint bin size in diameter,um
 CDP058_bnds,lower and upper bounds for CDP_LWO,um
 CDP5VMON_LWI,CDP 5 Vdc Monitor,Vdc
 CDP5VMON_LWO,CDP 5 Vdc Monitor,Vdc
@@ -85,8 +83,6 @@ EWX,Ambient Water Vapor Pressure (VCSEL),hPa
 EW_DPB,Ambient Water Vapor Pressure,hPa
 EW_DPT,Ambient Water Vapor Pressure,hPa
 EW_VXL,Ambient Water Vapor Pressure (VCSEL),hPa
-F2DC003_P2D,Fast2DC_v2 arithmetic midpoint bin size in diameter,um
-F2DS020_P2D,F2DS arithmetic midpoint bin size in diameter,um
 FCN,Raw BCN Counter Sample Flow Rate,vlpm
 FCNC,Corrected BCN Counter Sample Flow Rate,vlpm
 FILTER_CFDC,CFDC Filter (ON=1),bool
@@ -119,7 +115,6 @@ H2O_ARI,volume_mixing_ratio_of_water_in_dry_air,ppmv
 H2O_WVISO1,wet mole fraction of target water phase(s),ppmv
 H2O_WVISO2,wet mole fraction of target water phase(s),ppmv
 HGM232,Altitude above ground (radar altimeter),feet
-HVPS315_P2D,HVPS arithmetic midpoint bin size in diameter,um
 I2DCA_RPC,"Interarrival Time Accumulation, All Particles Including Rejectio",count
 IAS,Indicated Airspeed,knot
 ICOLLWC_NEV,Nevzorov LWC collector current,A
@@ -154,7 +149,6 @@ PBYP_CVI,CVI Bypass Pressure,hpa
 PCAB,Interior Cabin Static Pressure,hPa
 PCAB_WVISO1,Ambient Pressure,torr
 PCAB_WVISO2,Ambient Pressure,torr
-PCAS108,S200_RWO arithmetic midpoint bin size in diameter,um
 PCAS108_bnds,lower and upper bounds for S200_RWO,um
 PCN,BCN Counter Inlet Pressure,hPa
 PDRY,Power Dry Calculated,W
@@ -249,12 +243,10 @@ TVIR,Virtual Temperature,deg_C
 TWC_WVISO2,total water content,g/m3
 T_ARI,Aerodyne Mini 108 Temperature,K
 T_SDI,SDI Flowmeter Air Temperature,deg_C
-Time,time of measurement,seconds since 2024-02-28 00:00:00 +0000
 UACC_WYO,UHSAS Accumulation,sec
 UCURR_WYO,UHSAS Laser Current,V
 UFLWC_WYO,UHSAS Sample Flow at Ambient Conditions,vol cm3/s
 UFT_4,Under Floor Temperature,deg_C
-UHSAS011,UHSAS_WYO arithmetic midpoint bin size in diameter,um
 UHSAS011_bnds,lower and upper bounds for UHSAS_WYO,um
 UIC,"GPS-Corrected Wind Vector, East Component",m/s
 ULSRTEMP_WYO,UHSAS Laser Temperature,V
@@ -303,7 +295,6 @@ dD_WVISO2,hydrogen water isotope ratio (units permil),1e-3
 enhancement_CVI,CVI enhancement factor,""
 excess_CVI,CVI counterflow exess,SLPM
 flow_CVI,CVI inlet flow,SLPM
-interarrival_endpoints,"",""
 mr_WVISO1,mixing ratio,g/kg
 mr_WVISO2,total water mixing ratio,g/kg
 quality_CVI,measurement quality flag,""
@@ -312,3 +303,12 @@ quality_WVISO2,measurement quality flag,""
 target_CVI,measurement target flag,""
 target_WVISO1,measurement target flag,""
 target_WVISO2,measurement target flag,""
+CDP016,CDP_LWI arithmetic midpoint bin size in diameter,um
+CDP058,CDP_LWO arithmetic midpoint bin size in diameter,um
+F2DC003_P2D,Fast2DC_v2 arithmetic midpoint bin size in diameter,um
+F2DS020_P2D,F2DS arithmetic midpoint bin size in diameter,um
+HVPS315_P2D,HVPS arithmetic midpoint bin size in diameter,um
+PCAS108,S200_RWO arithmetic midpoint bin size in diameter,um
+Time,time of measurement,seconds since 2024-02-28 00:00:00 +0000
+UHSAS011,UHSAS_WYO arithmetic midpoint bin size in diameter,um
+interarrival_endpoints,"",""

@@ -26,9 +26,7 @@ CAVT_WVISO1,Cavity Temperature,deg_C
 CAVT_WVISO2,Cavity Temperature,deg_C
 CCDP_LWI,CDP Concentration (per cell),#/cm3
 CCDP_LWO,CDP Concentration (per cell),#/cm3
-CDP016,CDP_LWI arithmetic midpoint bin size in diameter,um
 CDP016_bnds,lower and upper bounds for CDP_LWI,um
-CDP058,CDP_LWO arithmetic midpoint bin size in diameter,um
 CDP058_bnds,lower and upper bounds for CDP_LWO,um
 CDP5VMON_LWI,CDP 5 Vdc Monitor,Vdc
 CDP5VMON_LWO,CDP 5 Vdc Monitor,Vdc
@@ -84,7 +82,6 @@ EWX,Ambient Water Vapor Pressure (VCSEL),hPa
 EW_DPB,Ambient Water Vapor Pressure,hPa
 EW_DPT,Ambient Water Vapor Pressure,hPa
 EW_VXL,Ambient Water Vapor Pressure (VCSEL),hPa
-F2DC003_P2D,Fast2DC_v2 arithmetic midpoint bin size in diameter,um
 FCN,Raw BCN Counter Sample Flow Rate,vlpm
 FCNC,Corrected BCN Counter Sample Flow Rate,vlpm
 FILTER_CFDC,CFDC Filter (ON=1),bool
@@ -151,7 +148,6 @@ PBYP_CVI,CVI Bypass Pressure,hpa
 PCAB,Interior Cabin Static Pressure,hPa
 PCAB_WVISO1,Ambient Pressure,torr
 PCAB_WVISO2,Ambient Pressure,torr
-PCAS108,S200_RWO arithmetic midpoint bin size in diameter,um
 PCAS108_bnds,lower and upper bounds for S200_RWO,um
 PCN,BCN Counter Inlet Pressure,hPa
 PDRY,Power Dry Calculated,W
@@ -245,12 +241,10 @@ TRSTB,RSTB Sensor Heater Unit Settings,deg_C
 TVIR,Virtual Temperature,deg_C
 T_ARI,Aerodyne Mini 108 Temperature,K
 T_SDI,SDI Flowmeter Air Temperature,deg_C
-Time,time of measurement,seconds since 2024-03-02 00:00:00 +0000
 UACC_WYO,UHSAS Accumulation,sec
 UCURR_WYO,UHSAS Laser Current,V
 UFLWC_WYO,UHSAS Sample Flow at Ambient Conditions,vol cm3/s
 UFT_4,Under Floor Temperature,deg_C
-UHSAS011,UHSAS_WYO arithmetic midpoint bin size in diameter,um
 UHSAS011_bnds,lower and upper bounds for UHSAS_WYO,um
 UIC,"GPS-Corrected Wind Vector, East Component",m/s
 ULSRTEMP_WYO,UHSAS Laser Temperature,V
@@ -296,4 +290,10 @@ d18O_WVISO2,Stable Water Isotope Ratio For Oxygen,permil
 dD_WVISO1,Stable Water Isotope Ratio For Hydrogen,permil
 dD_WVISO2,Stable Water Isotope Ratio For Hydrogen,permil
 enhancement_CVI,CVI Enhancement Factor,units
+CDP016,CDP_LWI arithmetic midpoint bin size in diameter,um
+CDP058,CDP_LWO arithmetic midpoint bin size in diameter,um
+F2DC003_P2D,Fast2DC_v2 arithmetic midpoint bin size in diameter,um
+PCAS108,S200_RWO arithmetic midpoint bin size in diameter,um
+Time,time of measurement,seconds since 2024-03-02 00:00:00 +0000
+UHSAS011,UHSAS_WYO arithmetic midpoint bin size in diameter,um
 interarrival_endpoints,"",""
