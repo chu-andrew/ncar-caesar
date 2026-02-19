@@ -49,4 +49,4 @@ def get_file_path(dataset_id: str, filename: str) -> str:
 def load_dataset(dataset_id: str, filename: str) -> xr.Dataset:
     """Open a dataset's NetCDF file and return an xarray Dataset."""
     path = get_file_path(dataset_id, filename)
-    return xr.open_dataset(path, decode_timedelta=True)
+    return xr.open_dataset(path, decode_cf=True, decode_timedelta=True)

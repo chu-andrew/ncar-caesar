@@ -1,12 +1,11 @@
 import os
 
-import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib.pyplot as plt
-import numpy as np
+import polars as pl
 import seaborn as sns
-from netCDF4 import Dataset
+import xarray as xr
 
 from nc.loader import PROJECT_ROOT, list_files, load_dataset
 
@@ -23,17 +22,25 @@ MIN_LON = 65
 MAX_LON = 80
 
 
-def extract_hours(ds: Dataset, time_var: str) -> np.ndarray:
-    """Convert time variable (seconds since midnight) to UTC hours."""
-    t = ds[time_var][:]
-    return t / 3600.0
+def construct_df(ds: xr.Dataset) -> pl.DataFrame:
+    """Convert relevant variables from xarray.Dataset to a Polars DataFrame."""
+    if TIME in ds:
+        t = ds[TIME]
+        ds = ds.assign(hours_utc=t.dt.hour + t.dt.minute / 60.0 + t.dt.second / 3600.0)
+
+    if ZAXIS in ds:
+        ds = ds.assign(alt_km=ds[ZAXIS] / 1000.0)
+
+    vars_to_keep = {TIME, LATITUDE, LONGITUDE, ZAXIS, "hours_utc", "alt_km"}
+    available_vars = list(vars_to_keep.intersection(ds.variables))
+
+    # convert to df (reset_index flattens coordinates)
+    df_pandas = ds[available_vars].to_dataframe().reset_index()
+    return pl.from_pandas(df_pandas)
 
 
-def plot_altitude(ds: Dataset, ax: plt.Axes, flight_label: str) -> None:
-    hours = extract_hours(ds, TIME)
-    alt_km = ds[ZAXIS][:] / 1000.0
-
-    sns.lineplot(x=hours, y=alt_km, ax=ax, linewidth=1.0)
+def plot_altitude(df: pl.DataFrame, ax: plt.Axes, flight_label: str) -> None:
+    sns.lineplot(data=df, x="hours_utc", y="alt_km", ax=ax, linewidth=1.0)
     ax.xaxis.set_major_formatter(
         plt.FuncFormatter(lambda h, _: f"{int(h):02d}:{int((h % 1) * 60):02d}")
     )
@@ -43,12 +50,8 @@ def plot_altitude(ds: Dataset, ax: plt.Axes, flight_label: str) -> None:
 
 
 def setup_map(ax: plt.Axes) -> None:
-    ax.add_feature(
-        cfeature.OCEAN.with_scale("50m"), facecolor=cartopy.feature.COLORS["water"]
-    )
-    ax.add_feature(
-        cfeature.LAND.with_scale("50m"), facecolor=cartopy.feature.COLORS["land"]
-    )
+    ax.add_feature(cfeature.OCEAN.with_scale("50m"), facecolor=cfeature.COLORS["water"])
+    ax.add_feature(cfeature.LAND.with_scale("50m"), facecolor=cfeature.COLORS["land"])
     ax.add_feature(cfeature.COASTLINE.with_scale("50m"), linewidth=0.25)
     ax.add_feature(cfeature.BORDERS.with_scale("50m"), linewidth=0.25, linestyle="--")
 
@@ -61,12 +64,15 @@ def setup_map(ax: plt.Axes) -> None:
     ax.set_aspect("auto")
 
 
-def plot_ground_track(ds: Dataset, ax: plt.Axes, label: str) -> None:
-    lat = ds[LATITUDE][:]
-    lon = ds[LONGITUDE][:]
-
+def plot_ground_track(df: pl.DataFrame, ax: plt.Axes, label: str) -> None:
     setup_map(ax)
-    ax.plot(lon, lat, transform=ccrs.PlateCarree(), linewidth=1.0, color="r")
+    ax.plot(
+        df[LONGITUDE].to_numpy(),
+        df[LATITUDE].to_numpy(),
+        transform=ccrs.PlateCarree(),
+        linewidth=1.0,
+        color="r",
+    )
     ax.set_title(f"{label} Ground Track")
 
 
@@ -92,27 +98,26 @@ if __name__ == "__main__":
 
     for flight, date in FLIGHTS.items():
         ds = load_dataset(DATASET, flight)
+        df = construct_df(ds)
+        ds.close()
+
         label = f"CAESAR {flight} ({date})"
 
-        lat_data = ds[LATITUDE][:]
-        lon_data = ds[LONGITUDE][:]
         map_proj = ccrs.LambertConformal(
-            central_longitude=float((lon_data.min() + lon_data.max()) / 2),
-            central_latitude=float((lat_data.min() + lat_data.max()) / 2),
+            central_longitude=float(df[LONGITUDE].mean()),
+            central_latitude=float(df[LATITUDE].mean()),
         )
 
         fig = plt.figure(figsize=(18, 6))
         ax_alt = fig.add_subplot(1, 2, 1)
         ax_track = fig.add_subplot(1, 2, 2, projection=map_proj)
 
-        plot_altitude(ds, ax_alt, label)
-        plot_ground_track(ds, ax_track, label)
+        plot_altitude(df, ax_alt, label)
+        plot_ground_track(df, ax_track, label)
 
         out_path = os.path.join(PLOTS_DIR, f"{flight.lower()}_summary.png")
         plt.savefig(out_path, dpi=200, bbox_inches="tight")
         print(f"Saved: {out_path}")
-
-        ds.close()
 
     # all flights map
     map_proj = ccrs.LambertConformal(
@@ -126,16 +131,16 @@ if __name__ == "__main__":
 
     for flight, date in FLIGHTS.items():
         ds = load_dataset(DATASET, flight)
-        lat = ds[LATITUDE][:]
-        lon = ds[LONGITUDE][:]
+        df = construct_df(ds)
+        ds.close()
+
         ax.plot(
-            lon,
-            lat,
+            df[LONGITUDE].to_numpy(),
+            df[LATITUDE].to_numpy(),
             transform=ccrs.PlateCarree(),
             linewidth=1.25,
             label=f"{flight}",
         )
-        ds.close()
 
     ax.legend(loc="lower left", fontsize=11, framealpha=1)
     ax.set_title("Ground track of all research flights")
