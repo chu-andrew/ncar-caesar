@@ -8,5 +8,7 @@ dependencies = [
     "cartopy>=0.25.0",
     "netcdf4>=1.7.4",
     "polars>=1.38.1",
+    "pyarrow>=23.0.1",
     "seaborn>=0.13.2",
+    "xarray>=2026.2.0",
 ]
