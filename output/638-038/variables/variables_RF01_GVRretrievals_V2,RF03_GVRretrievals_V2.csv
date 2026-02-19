@@ -12,7 +12,5 @@ dewT,Flight Level Dew Point Temperature,degrees C
 alt,Altitude,m
 zenithAngle,Zenith angle of upward looking instruments,degrees
 Z,integrated reflectivity,dBZ
-time,Time,seconds since 1/1/1970 00:00:00 UTC
 GVR_osc,Are oscillations present in the GVR at this time?,True/False
-longitude,Longitude,degrees E
-latitude,Latitude,degrees N
+time,Time,seconds since 1/1/1970 00:00:00 UTC
