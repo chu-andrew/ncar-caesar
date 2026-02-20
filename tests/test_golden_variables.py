@@ -13,7 +13,7 @@ from conftest import GOLDEN_DIR
 from nc.variables import export_variable_groups
 
 
-DATASETS = ["638-001", "638-038"]
+DATASETS = ["638-001", "638-021", "638-038"]
 
 
 def _collect_csv_files(base_dir: str) -> list[str]:

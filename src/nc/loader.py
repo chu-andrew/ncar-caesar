@@ -18,14 +18,20 @@ def get_dataset_dir(dataset_id: str) -> str:
     return path
 
 
+NC_EXTENSIONS = ("*.nc", "*.cdf")
+
+
 def list_files(dataset_id: str) -> list[str]:
-    """List available .nc filenames in a dataset, sorted."""
-    pattern = os.path.join(get_dataset_dir(dataset_id), "*.nc")
-    return sorted(os.path.basename(f) for f in glob(pattern))
+    """List available NetCDF filenames (.nc, .cdf) in a dataset, sorted."""
+    data_dir = get_dataset_dir(dataset_id)
+    files = []
+    for ext in NC_EXTENSIONS:
+        files.extend(glob(os.path.join(data_dir, ext)))
+    return sorted(os.path.basename(f) for f in files)
 
 
 def get_file_path(dataset_id: str, filename: str) -> str:
-    """Resolve the full path to a .nc file.
+    """Resolve the full path to a NetCDF file (.nc or .cdf).
 
     ``filename`` can be a prefix like 'RF01' or a full filename.
     """
@@ -44,7 +50,7 @@ def get_file_path(dataset_id: str, filename: str) -> str:
         names = [os.path.basename(m) for m in matches]
         raise ValueError(f"Ambiguous prefix '{filename}', matches: {names}")
 
-    raise FileNotFoundError(f"No .nc file matching '{filename}' in {data_dir}")
+    raise FileNotFoundError(f"No NetCDF file matching '{filename}' in {data_dir}")
 
 
 DATASET_VARS = {

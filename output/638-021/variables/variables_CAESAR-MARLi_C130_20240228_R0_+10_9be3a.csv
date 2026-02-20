@@ -1,0 +1,16 @@
+variable,long_name,units
+ProductionDateTime,Production  Date Time ,"A string in the form of ""YYYY-MM-DDTHH:MM:SS.SSSZ"" which describes the time at which this profile is produced (YYYY for year, MM for month, DD for day,HH for hour, MM for minute, SS.SSS for second)"
+VersionID,The version of released product,""
+Lon,The longitude of Aircraft  ,"degree, positive eastward"
+Lat,The latitude of Aircraft  ,"degree, positive northward"
+Alt,The altitude of Aircraft   ,km (MSL)
+Pitch,The pitch angle of Aircraft   ,degree
+Roll,The roll angle of King Air   ,degree
+T_insitu, In situ  flight level temperature ,degree
+WVMR_insitu, In situ  flight level water vapor mixing ratio ,g/kg
+H,Bin height (MSL),km
+time,UTC time for each profile,UTC hour
+LSR,Aerosols or cloud lidar scattering ratio (LSR) profiles  ,none 
+Dep,Lidar linear depolarization ratio,%
+WVMR,Water vapor mixing ratio (WVMR),g/kg 
+T,Atmospheric Temperature ,Degree  

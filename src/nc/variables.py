@@ -1,5 +1,6 @@
 """Group NetCDF files by their variable sets and export a CSV per group."""
 
+import hashlib
 import os
 import sys
 
@@ -38,10 +39,17 @@ def export_variable_groups(dataset_id: str, output_dir: str) -> None:
         ]  # NB: brittle depending on filename
         label = ",".join(labels)
 
+        # Truncate if the filename would exceed filesystem limits (255 bytes)
+        csv_name = f"variables_{label}.csv"
+        if len(csv_name.encode()) > 255:
+            digest = hashlib.sha256(label.encode()).hexdigest()[:5]
+            first = labels[0]
+            csv_name = f"variables_{first}_+{len(labels) - 1}_{digest}.csv"
+
         with open_dataset(dataset_id, filenames[0]) as ds:
             df = read_variables(ds)
 
-        csv_path = os.path.join(output_dir, f"variables_{label}.csv")
+        csv_path = os.path.join(output_dir, csv_name)
         export_csv(df, csv_path)
         print(f"\tFiles: {labels} ({len(var_set)} variables)")
 
