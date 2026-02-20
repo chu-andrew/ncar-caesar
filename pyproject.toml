@@ -13,3 +13,12 @@ dependencies = [
     "seaborn>=0.13.2",
     "xarray>=2026.2.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pillow>=11.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
