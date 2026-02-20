@@ -7,7 +7,7 @@ import polars as pl
 import seaborn as sns
 import xarray as xr
 
-from nc.loader import PROJECT_ROOT, list_files, load_dataset
+from nc.loader import PROJECT_ROOT, load_dataset
 
 # Derived from globals in the netCDF file
 LATITUDE = "LATC"
@@ -31,7 +31,7 @@ def construct_df(ds: xr.Dataset) -> pl.DataFrame:
     if ZAXIS in ds:
         ds = ds.assign(alt_km=ds[ZAXIS] / 1000.0)
 
-    vars_to_keep = {TIME, LATITUDE, LONGITUDE, ZAXIS, "hours_utc", "alt_km"}
+    vars_to_keep = {LATITUDE, LONGITUDE, "hours_utc", "alt_km"}
     available_vars = list(vars_to_keep.intersection(ds.variables))
 
     # convert to df (reset_index flattens coordinates)
