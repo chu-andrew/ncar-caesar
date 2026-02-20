@@ -6,15 +6,10 @@ against the golden reference files in output/.
 """
 
 import os
-import sys
 
 import pytest
 
-from conftest import GOLDEN_DIR, PROJECT_ROOT
-
-# Ensure src is importable
-sys.path.insert(0, os.path.join(PROJECT_ROOT, "src"))
-
+from conftest import GOLDEN_DIR
 from nc.variables import export_variable_groups
 
 

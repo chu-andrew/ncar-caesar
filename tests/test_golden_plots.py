@@ -5,19 +5,20 @@ Re-runs each plotting script and compares output PNGs against the golden
 reference files in output/ using pixel-level numpy comparison.
 """
 
+import importlib
 import os
-import sys
 
 import numpy as np
 import pytest
 from PIL import Image
 
-from conftest import GOLDEN_DIR, PROJECT_ROOT
+from conftest import GOLDEN_DIR
 
-SRC_DIR = os.path.join(PROJECT_ROOT, "src")
-sys.path.insert(0, SRC_DIR)
-sys.path.insert(0, os.path.join(SRC_DIR, "638-001"))
-sys.path.insert(0, os.path.join(SRC_DIR, "638-038"))
+PLOT_SCRIPTS = [
+    ("summary", "638-001/plots/summary"),
+    ("segments", "638-038/plots/segments"),
+    ("water_path", "638-038/plots/water_path"),
+]
 
 
 def _png_to_array(path: str) -> np.ndarray:
@@ -55,13 +56,23 @@ def _collect_pngs(directory: str) -> list[str]:
     return sorted(f for f in os.listdir(directory) if f.endswith(".png"))
 
 
-def _assert_golden_pngs(golden_dir: str, actual_dir: str):
-    """Assert that actual PNGs match golden PNGs exactly."""
+@pytest.mark.parametrize(
+    "module_name, golden_subdir",
+    PLOT_SCRIPTS,
+    ids=[name for name, _ in PLOT_SCRIPTS],
+)
+def test_plots_match_golden(module_name, golden_subdir, tmp_output, monkeypatch):
+    golden_dir = os.path.join(GOLDEN_DIR, golden_subdir)
     golden_pngs = _collect_pngs(golden_dir)
     if not golden_pngs:
         pytest.skip(f"No golden PNGs found in {golden_dir}")
 
-    actual_pngs = _collect_pngs(actual_dir)
+    tmp_plots = os.path.join(tmp_output, golden_subdir)
+    module = importlib.import_module(module_name)
+    monkeypatch.setattr(module, "PLOTS_DIR", tmp_plots)
+    module.main()
+
+    actual_pngs = _collect_pngs(tmp_plots)
     assert set(golden_pngs) == set(actual_pngs), (
         f"PNG sets differ.\n  Golden: {golden_pngs}\n  Actual: {actual_pngs}"
     )
@@ -69,53 +80,5 @@ def _assert_golden_pngs(golden_dir: str, actual_dir: str):
     for png in golden_pngs:
         _assert_images_match(
             os.path.join(golden_dir, png),
-            os.path.join(actual_dir, png),
+            os.path.join(tmp_plots, png),
         )
-
-
-class TestSummaryPlots:
-    """Golden tests for 638-001 summary plots."""
-
-    GOLDEN_PLOTS_DIR = os.path.join(GOLDEN_DIR, "638-001/plots/summary")
-
-    def test_summary_plots_match_golden(self, tmp_output, monkeypatch):
-        tmp_plots = os.path.join(tmp_output, "638-001/plots/summary")
-
-        import summary
-
-        monkeypatch.setattr(summary, "PLOTS_DIR", tmp_plots)
-        summary.main()
-
-        _assert_golden_pngs(self.GOLDEN_PLOTS_DIR, tmp_plots)
-
-
-class TestSegmentPlots:
-    """Golden tests for 638-038 segment plots."""
-
-    GOLDEN_PLOTS_DIR = os.path.join(GOLDEN_DIR, "638-038/plots/segments")
-
-    def test_segment_plots_match_golden(self, tmp_output, monkeypatch):
-        tmp_plots = os.path.join(tmp_output, "638-038/plots/segments")
-
-        import segments
-
-        monkeypatch.setattr(segments, "PLOTS_DIR", tmp_plots)
-        segments.main()
-
-        _assert_golden_pngs(self.GOLDEN_PLOTS_DIR, tmp_plots)
-
-
-class TestWaterPathPlots:
-    """Golden tests for 638-038 water path plots."""
-
-    GOLDEN_PLOTS_DIR = os.path.join(GOLDEN_DIR, "638-038/plots/water_path")
-
-    def test_water_path_plots_match_golden(self, tmp_output, monkeypatch):
-        tmp_plots = os.path.join(tmp_output, "638-038/plots/water_path")
-
-        import water_path
-
-        monkeypatch.setattr(water_path, "PLOTS_DIR", tmp_plots)
-        water_path.main()
-
-        _assert_golden_pngs(self.GOLDEN_PLOTS_DIR, tmp_plots)
