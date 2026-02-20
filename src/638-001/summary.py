@@ -7,13 +7,13 @@ import polars as pl
 import seaborn as sns
 import xarray as xr
 
-from nc.loader import PROJECT_ROOT, load_dataset
+from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
 
-# Derived from globals in the netCDF file
-LATITUDE = "LATC"
-LONGITUDE = "LONC"
-ZAXIS = "GGALT"
-TIME = "Time"
+_vars = DATASET_VARS["638-001"]
+LATITUDE = _vars["latitude"]
+LONGITUDE = _vars["longitude"]
+ZAXIS = _vars["altitude"]
+TIME = _vars["time"]
 
 # configured by feel (reference: https://data.eol.ucar.edu/project/CAESAR)
 MIN_LAT = -15
@@ -81,9 +81,9 @@ Summary Plots
 """
 DATASET = "638-001"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/638-001/plots/summary")
-os.makedirs(PLOTS_DIR, exist_ok=True)
 
 if __name__ == "__main__":
+    os.makedirs(PLOTS_DIR, exist_ok=True)
     FLIGHTS = {
         "RF01": "2024-02-28",
         "RF02": "2024-02-29",
@@ -97,9 +97,8 @@ if __name__ == "__main__":
     }
 
     for flight, date in FLIGHTS.items():
-        ds = load_dataset(DATASET, flight)
-        df = construct_df(ds)
-        ds.close()
+        with open_dataset(DATASET, flight) as ds:
+            df = construct_df(ds)
 
         label = f"CAESAR {flight} ({date})"
 
@@ -130,9 +129,8 @@ if __name__ == "__main__":
     setup_map(ax)
 
     for flight, date in FLIGHTS.items():
-        ds = load_dataset(DATASET, flight)
-        df = construct_df(ds)
-        ds.close()
+        with open_dataset(DATASET, flight) as ds:
+            df = construct_df(ds)
 
         ax.plot(
             df[LONGITUDE].to_numpy(),

@@ -5,11 +5,12 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 
-from nc.loader import PROJECT_ROOT, load_dataset
+from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
 from nc.segmentation import find_inflection_points
 
-ALTITUDE = "alt"
-TIME = "time"
+_vars = DATASET_VARS["638-038"]
+ALTITUDE = _vars["altitude"]
+TIME = _vars["time"]
 DATASET = "638-038"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/segments")
 
@@ -71,10 +72,9 @@ def load_flight_segments(flight: str, epsilon: float = None) -> FlightSegments:
     if epsilon is None:
         epsilon = EPSILONS[flight]
 
-    ds = load_dataset(DATASET, flight)
-    times = ds[TIME].values
-    altitude = ds[ALTITUDE].values / 1000.0  # m to km
-    ds.close()
+    with open_dataset(DATASET, flight) as ds:
+        times = ds[TIME].values
+        altitude = ds[ALTITUDE].values / 1000.0  # m to km
 
     mask = find_inflection_points(altitude, epsilon=epsilon)
     inflection_indices = np.where(mask)[0]

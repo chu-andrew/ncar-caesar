@@ -4,7 +4,7 @@ import sys
 import polars as pl
 import xarray as xr
 
-from nc.loader import load_dataset
+from nc.loader import open_dataset
 
 
 def read_variables(ds: xr.Dataset, verbose: bool = False) -> pl.DataFrame:
@@ -68,7 +68,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     dataset_id, filename = sys.argv[1], sys.argv[2]
-    ds = load_dataset(dataset_id, filename)
-    print_globals(ds)
-    print_variables(ds)
-    ds.close()
+    with open_dataset(dataset_id, filename) as ds:
+        print_globals(ds)
+        print_variables(ds)

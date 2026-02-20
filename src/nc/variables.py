@@ -4,7 +4,7 @@ import os
 import sys
 
 from nc.header import export_csv, read_variables
-from nc.loader import PROJECT_ROOT, list_files, load_dataset
+from nc.loader import PROJECT_ROOT, list_files, open_dataset
 
 
 def group_by_variables(dataset_id: str) -> dict[frozenset[str], list[str]]:
@@ -12,9 +12,8 @@ def group_by_variables(dataset_id: str) -> dict[frozenset[str], list[str]]:
     files = list_files(dataset_id)
     groups: dict[frozenset[str], list[str]] = {}
     for f in files:
-        ds = load_dataset(dataset_id, f)
-        variables = frozenset(set(ds.data_vars) | set(ds.coords))
-        ds.close()
+        with open_dataset(dataset_id, f) as ds:
+            variables = frozenset(set(ds.data_vars) | set(ds.coords))
         groups.setdefault(variables, []).append(f)
     return groups
 
@@ -39,9 +38,8 @@ def export_variable_groups(dataset_id: str, output_dir: str) -> None:
         ]  # NB: brittle depending on filename
         label = ",".join(labels)
 
-        ds = load_dataset(dataset_id, filenames[0])
-        df = read_variables(ds)
-        ds.close()
+        with open_dataset(dataset_id, filenames[0]) as ds:
+            df = read_variables(ds)
 
         csv_path = os.path.join(output_dir, f"variables_{label}.csv")
         export_csv(df, csv_path)
