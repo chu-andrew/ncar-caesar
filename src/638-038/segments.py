@@ -134,7 +134,11 @@ def plot_flight_segments(fs: FlightSegments):
     print(f"Saved: {out_path}")
 
 
-if __name__ == "__main__":
+def main():
     for flight in EPSILONS:
         fs = load_flight_segments(flight)
         plot_flight_segments(fs)
+
+
+if __name__ == "__main__":
+    main()

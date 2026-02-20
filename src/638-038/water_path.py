@@ -62,20 +62,25 @@ def plot_water_path(flight: str, start_pt: int, end_pt: int):
     print(f"Saved: {out_path}")
 
 
-if __name__ == "__main__":
-    # NB: must change if segmentation strategy changes
-    SEGMENTS = {
-        "RF01": [(14, 15), (19, 20)],
-        "RF02": [(13, 15), (19, 20), (25, 26)],
-        "RF03": [(13, 14)],
-        "RF04": [(8, 9)],
-        "RF05": [(10, 11), (16, 17)],
-        "RF06": [(21, 22)],
-        "RF07": [(8, 9), (14, 15)],
-        "RF09": [(35, 36)],
-        "RF10": [(64, 65), (69, 70)],
-    }
+# NB: must change if segmentation strategy changes
+SEGMENTS = {
+    "RF01": [(14, 15), (19, 20)],
+    "RF02": [(13, 15), (19, 20), (25, 26)],
+    "RF03": [(13, 14)],
+    "RF04": [(8, 9)],
+    "RF05": [(10, 11), (16, 17)],
+    "RF06": [(21, 22)],
+    "RF07": [(8, 9), (14, 15)],
+    "RF09": [(35, 36)],
+    "RF10": [(64, 65), (69, 70)],
+}
 
+
+def main():
     for flight in SEGMENTS:
         for start, end in SEGMENTS[flight]:
             plot_water_path(flight, start, end)
+
+
+if __name__ == "__main__":
+    main()

@@ -82,19 +82,21 @@ Summary Plots
 DATASET = "638-001"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/638-001/plots/summary")
 
-if __name__ == "__main__":
+FLIGHTS = {
+    "RF01": "2024-02-28",
+    "RF02": "2024-02-29",
+    "RF03": "2024-03-02",
+    "RF04": "2024-03-05",
+    "RF05": "2024-03-11",
+    "RF06": "2024-03-12",
+    "RF07": "2024-03-16",
+    "RF09": "2024-04-02",
+    "RF10": "2024-04-03",
+}
+
+
+def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
-    FLIGHTS = {
-        "RF01": "2024-02-28",
-        "RF02": "2024-02-29",
-        "RF03": "2024-03-02",
-        "RF04": "2024-03-05",
-        "RF05": "2024-03-11",
-        "RF06": "2024-03-12",
-        "RF07": "2024-03-16",
-        "RF09": "2024-04-02",
-        "RF10": "2024-04-03",
-    }
 
     for flight, date in FLIGHTS.items():
         with open_dataset(DATASET, flight) as ds:
@@ -146,3 +148,7 @@ if __name__ == "__main__":
     out_path = os.path.join(PLOTS_DIR, "all_ground_track.png")
     plt.savefig(out_path, dpi=200, bbox_inches="tight")
     print(f"Saved: {out_path}")
+
+
+if __name__ == "__main__":
+    main()
