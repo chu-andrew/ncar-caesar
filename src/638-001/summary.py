@@ -7,6 +7,7 @@ import polars as pl
 import seaborn as sns
 import xarray as xr
 
+from nc.flights import FLIGHTS
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
 
 _vars = DATASET_VARS["638-001"]
@@ -81,18 +82,6 @@ Summary Plots
 """
 DATASET = "638-001"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/638-001/plots/summary")
-
-FLIGHTS = {
-    "RF01": "2024-02-28",
-    "RF02": "2024-02-29",
-    "RF03": "2024-03-02",
-    "RF04": "2024-03-05",
-    "RF05": "2024-03-11",
-    "RF06": "2024-03-12",
-    "RF07": "2024-03-16",
-    "RF09": "2024-04-02",
-    "RF10": "2024-04-03",
-}
 
 
 def main():
