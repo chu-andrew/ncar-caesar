@@ -60,6 +60,10 @@ DATASET_VARS = {
         "latitude": "LATC",
         "longitude": "LONC",
     },
+    "638-021": {
+        "time": "time",
+        "altitude": "Alt",
+    },
     "638-038": {
         "time": "time",
         "altitude": "alt",

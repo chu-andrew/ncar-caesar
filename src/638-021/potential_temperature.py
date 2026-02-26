@@ -17,11 +17,36 @@ PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/potential_temper
 FILL_VALUE = 9999.0
 P_850 = 850  # hPa
 
-P_SURFACE = 1013.25  # hPa, standard sea-level pressure
-T_MEAN = 288.15  # K, standard mean temperature (ISA sea-level) = 15 degC
-R_D = 287.05  # J/(kg K), specific gas constant for dry air
-G = 9.81  # m/s^2, gravitational acceleration
-KAPPA = 0.286  # R/c_p
+MAD_K = 5.0  # multiplier for MAD
+
+
+def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
+    """
+    Mask outlier temperatures using per-level median absolute deviation.
+    """
+
+    T = T.astype(np.float64, copy=True)
+    T[(T >= FILL_VALUE) | (T < -100) | (T > 100)] = np.nan
+
+    if T.ndim == 1:
+        T = T[:, np.newaxis]
+        squeeze = True
+    else:
+        squeeze = False
+
+    for j in range(T.shape[1]):
+        col = T[:, j]
+        valid = col[~np.isnan(col)]
+        if len(valid) < 3:
+            continue
+        median = np.median(valid)
+        mad = np.median(np.abs(valid - median))
+        if mad == 0:
+            continue
+        else:
+            T[np.abs(col - median) > k * mad, j] = np.nan
+
+    return T[:, 0] if squeeze else T
 
 
 def height_to_pressure(h_km: np.ndarray) -> np.ndarray:
@@ -29,12 +54,18 @@ def height_to_pressure(h_km: np.ndarray) -> np.ndarray:
 
     p = p_surface * exp(-h * g / (R_d * T_mean))
     """
+    P_SURFACE = 1013.25  # hPa, standard sea-level pressure
+    T_MEAN = 288.15  # K, standard mean temperature (ISA sea-level) = 15 degC
+    R_D = 287.05  # J/(kg K), specific gas constant for dry air
+    G = 9.81  # m/s^2, gravitational acceleration
+
     h_m = h_km * 1000.0  # km -> m
     return P_SURFACE * np.exp(-h_m * G / (R_D * T_MEAN))
 
 
 def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
-    """θ = T (p₀/p)^(R/cₚ)  with p₀ = 1000 hPa, R/cₚ = 0.286."""
+    KAPPA = 0.286  # R/c_p
+
     t_kelvin = t_celsius + 273.15
     return t_kelvin * (1000.0 / p_hpa) ** KAPPA
 
@@ -42,9 +73,6 @@ def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
 def _extract_theta_850_from_file(
     filename: str,
 ) -> tuple[np.ndarray, np.ndarray, float, float]:
-    T_MIN = -80.0  # degC
-    T_MAX = 60.0  # degC
-
     with open_dataset(DATASET, filename) as ds:
         H = ds["H"].values  # bin height (MSL), km
         T = ds["T"].values  # atmospheric temperature, degC
@@ -58,12 +86,8 @@ def _extract_theta_850_from_file(
     h_actual = float(H[idx])
     p_actual = float(p_levels[idx])
 
-    # extract temperature time-series at that level
-    t_at_level = T[:, idx].copy()
-
-    # filter invalid values: fill values and unphysical temperatures
-    invalid = (t_at_level >= FILL_VALUE) | (t_at_level < T_MIN) | (t_at_level > T_MAX)
-    t_at_level[invalid] = np.nan
+    # extract temperature time-series at that level, mask outliers
+    t_at_level = mask_temperature_outliers(T[:, idx])
 
     theta = potential_temperature(t_at_level, p_actual)
     return time, theta, h_actual, p_actual
