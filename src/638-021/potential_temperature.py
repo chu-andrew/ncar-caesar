@@ -129,7 +129,7 @@ def compute_theta_850(flight: str) -> dict:
     }
 
 
-def plot_theta_850(flight: str, result: dict) -> str:
+def plot_theta_850(flight: str, result: dict, theta_lim: tuple, alt_lim: tuple) -> str:
     os.makedirs(PLOTS_DIR, exist_ok=True)
     out_path = os.path.join(PLOTS_DIR, f"{flight.lower()}_theta850.png")
 
@@ -144,10 +144,12 @@ def plot_theta_850(flight: str, result: dict) -> str:
     )
     ax.set_xlabel("Time (UTC)")
     ax.set_ylabel("$\\theta_{850}$ (K)")
+    ax.set_ylim(theta_lim)
 
     ax2 = ax.twinx()
     ax2.plot(time, alt, color="black", linewidth=1.5, label="Aircraft altitude")
     ax2.set_ylabel("Aircraft Altitude (km)")
+    ax2.set_ylim(alt_lim)
 
     lines, labels = ax.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -166,13 +168,24 @@ def plot_theta_850(flight: str, result: dict) -> str:
 
 
 def main():
-    flights = MARLI_FILES.keys()
+    flights = list(MARLI_FILES.keys())
 
+    # compute all results and find global ranges
+    results = {}
     for flight in flights:
-        result = compute_theta_850(flight)
+        results[flight] = compute_theta_850(flight)
+
+    all_theta = np.concatenate([r["theta_850"] for r in results.values()])
+    all_alt = np.concatenate([r["altitude"] for r in results.values()])
+    theta_lim = (np.nanmin(all_theta), np.nanmax(all_theta))
+    alt_lim = (np.nanmin(all_alt), np.nanmax(all_alt))
+
+    # plot with fixed ranges
+    for flight in flights:
+        result = results[flight]
         valid = np.count_nonzero(~np.isnan(result["theta_850"]))
         total = len(result["theta_850"])
-        plot = plot_theta_850(flight, result)
+        plot = plot_theta_850(flight, result, theta_lim, alt_lim)
         print(
             f"{flight}: theta_850 at H={result['h_850']:.4f} km "
             f"(p={result['p_850']:.1f} hPa), "

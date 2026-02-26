@@ -14,7 +14,7 @@ ALTITUDE = _vars["altitude"]
 TIME = _vars["time"]
 
 
-def plot_temperature_contour(flight: str) -> str:
+def load_contour_data(flight: str) -> dict:
     filenames = MARLI_FILES[flight]
 
     # use the first file's height grid as reference
@@ -35,21 +35,31 @@ def plot_temperature_contour(flight: str) -> str:
             if h_file.shape[0] == H.shape[0]:
                 all_T.append(t_data)
             else:
-                # interpolate onto the reference H grid
                 t_interp = np.array(
                     [np.interp(H, h_file, t_data[i]) for i in range(t_data.shape[0])]
                 )
                 all_T.append(t_interp)
 
-    time = np.concatenate(all_time)
-    T = np.concatenate(all_T, axis=0)
-    alt = np.concatenate(all_alt)
+    T = mask_temperature_outliers(np.concatenate(all_T, axis=0))
 
-    # mask fill values and per-level MAD outliers
-    T = mask_temperature_outliers(T)
+    return {
+        "H": H,
+        "time": np.concatenate(all_time),
+        "T": T,
+        "alt": np.concatenate(all_alt),
+    }
+
+
+def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) -> str:
+    H = data["H"]
+    time = data["time"]
+    T = data["T"]
+    alt = data["alt"]
 
     fig, ax = plt.subplots(figsize=(12, 6))
-    cf = ax.pcolormesh(time, H, T.T, shading="auto", cmap="RdYlBu_r")
+    cf = ax.pcolormesh(
+        time, H, T.T, shading="auto", cmap="RdYlBu_r", vmin=vmin, vmax=vmax
+    )
     fig.colorbar(cf, ax=ax, label="Temperature (°C)")
 
     ax.xaxis.set_major_formatter(
@@ -83,8 +93,19 @@ def plot_temperature_contour(flight: str) -> str:
 
 
 def main():
-    for flight in MARLI_FILES:
-        path = plot_temperature_contour(flight)
+    flights = list(MARLI_FILES.keys())
+
+    # load all data and find global temperature range
+    all_data = {}
+    for flight in flights:
+        all_data[flight] = load_contour_data(flight)
+
+    vmin = min(np.nanmin(d["T"]) for d in all_data.values())
+    vmax = max(np.nanmax(d["T"]) for d in all_data.values())
+
+    # plot with fixed color range
+    for flight in flights:
+        path = plot_temperature_contour(flight, all_data[flight], vmin, vmax)
         print(f"{flight} -> {path}")
 
 
