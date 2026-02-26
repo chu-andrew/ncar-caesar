@@ -8,8 +8,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from nc.flights import FLIGHTS, MARLI_FILES
-from nc.loader import PROJECT_ROOT, open_dataset
+from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
 from nc.time import utc_hours_to_datetime64
+
+_vars = DATASET_VARS["638-021"]
+ALTITUDE = _vars["altitude"]
 
 DATASET = "638-021"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/potential_temperature")
@@ -70,13 +73,10 @@ def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
     return t_kelvin * (1000.0 / p_hpa) ** KAPPA
 
 
-def _extract_theta_850_from_file(
-    filename: str,
-) -> tuple[np.ndarray, np.ndarray, float, float]:
-    with open_dataset(DATASET, filename) as ds:
-        H = ds["H"].values  # bin height (MSL), km
-        T = ds["T"].values  # atmospheric temperature, degC
-        time = ds["time"].values  # UTC time
+def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
+    H = ds["H"].values  # bin height (MSL), km
+    T = ds["T"].values  # atmospheric temperature, degC
+    time = ds["time"].values  # UTC time
 
     # convert all height bins to pressure
     p_levels = height_to_pressure(H)
@@ -98,11 +98,14 @@ def compute_theta_850(flight: str) -> dict:
 
     all_time = []
     all_theta = []
+    all_alt = []
     h_actual = None
     p_actual = None
 
     for filename in filenames:
-        time, theta, h, p = _extract_theta_850_from_file(filename)
+        with open_dataset(DATASET, filename) as ds:
+            time, theta, h, p = _extract_theta_850(ds)
+            all_alt.append(ds[ALTITUDE].values)
         all_time.append(time)
         all_theta.append(theta)
         if h_actual is None:
@@ -111,6 +114,7 @@ def compute_theta_850(flight: str) -> dict:
 
     time_hours = np.concatenate(all_time)
     theta_850 = np.concatenate(all_theta)
+    altitude = np.concatenate(all_alt)
 
     date_str = FLIGHTS[flight]
     time_dt = utc_hours_to_datetime64(time_hours, date_str)
@@ -119,6 +123,7 @@ def compute_theta_850(flight: str) -> dict:
         "time": time_dt,
         "time_utc_hours": time_hours,
         "theta_850": theta_850,
+        "altitude": altitude,
         "h_850": h_actual,
         "p_850": p_actual,
     }
@@ -130,14 +135,24 @@ def plot_theta_850(flight: str, result: dict) -> str:
 
     time = result["time_utc_hours"]
     theta = result["theta_850"]
+    alt = result["altitude"]
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(time, theta, marker="o", markersize=3, linewidth=1)
+    ax.plot(time, theta, marker="o", markersize=3, linewidth=1, label="$\\theta_{850}$")
     ax.xaxis.set_major_formatter(
         plt.FuncFormatter(lambda h, _: f"{int(h):02d}:{int((h % 1) * 60):02d}")
     )
     ax.set_xlabel("Time (UTC)")
     ax.set_ylabel("$\\theta_{850}$ (K)")
+
+    ax2 = ax.twinx()
+    ax2.plot(time, alt, color="black", linewidth=1.5, label="Aircraft altitude")
+    ax2.set_ylabel("Aircraft Altitude (km)")
+
+    lines, labels = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax.legend(lines + lines2, labels + labels2, loc="upper right", fontsize=9)
+
     ax.set_title(
         f"{flight}: Potential Temperature at ~850 hPa "
         f"(H={result['h_850']:.3f} km, p={result['p_850']:.1f} hPa)"
