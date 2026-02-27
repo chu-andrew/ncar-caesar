@@ -20,7 +20,7 @@ FILL_VALUE = 9999.0
 P_850 = 850  # hPa
 
 MAD_K = 5.0  # multiplier for MAD
-TEMPORAL_RESOLUTION = 60 * 2  # seconds
+TEMPORAL_RESOLUTION = 30 # seconds
 
 
 def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
