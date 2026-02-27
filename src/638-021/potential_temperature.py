@@ -7,9 +7,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from nc.flights import FLIGHTS, MARLI_FILES
+from nc.flights import MARLI_FILES
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
-from nc.time import utc_hours_to_datetime64
 
 _vars = DATASET_VARS["638-021"]
 ALTITUDE = _vars["altitude"]
@@ -21,6 +20,7 @@ FILL_VALUE = 9999.0
 P_850 = 850  # hPa
 
 MAD_K = 5.0  # multiplier for MAD
+TEMPORAL_RESOLUTION = 60 * 2  # seconds
 
 
 def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
@@ -93,6 +93,35 @@ def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
     return time, theta, h_actual, p_actual
 
 
+def regrid_timeseries(
+        time_hours: np.ndarray,
+        data: np.ndarray,
+        dt_seconds: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Regrid time series to uniform temporal resolution (of dt_seconds) using block averaging.
+    """
+    dt_hours = dt_seconds / 3600.0
+
+    # create uniform grid from min to max time
+    t_min = np.nanmin(time_hours)
+    t_max = np.nanmax(time_hours)
+    time_edges = np.arange(t_min, t_max + dt_hours, dt_hours)
+    time_regrid = time_edges[:-1] + dt_hours / 2  # bin centers
+
+    # bin data and compute mean in each bin
+    data_regrid = np.full(len(time_regrid), np.nan)
+    for i in range(len(time_regrid)):
+        mask = (time_hours >= time_edges[i]) & (time_hours < time_edges[i + 1])
+        bin_data = data[mask]
+        valid_data = bin_data[~np.isnan(bin_data)]
+
+        if len(valid_data) > 0:
+            data_regrid[i] = np.mean(valid_data)
+
+    return time_regrid, data_regrid
+
+
 def compute_theta_850(flight: str) -> dict:
     filenames = MARLI_FILES[flight]
 
@@ -112,33 +141,47 @@ def compute_theta_850(flight: str) -> dict:
             h_actual = h
             p_actual = p
 
-    time_hours = np.concatenate(all_time)
-    theta_850 = np.concatenate(all_theta)
-    altitude = np.concatenate(all_alt)
+    time_hours_native = np.concatenate(all_time)
+    theta_850_native = np.concatenate(all_theta)
+    altitude_native = np.concatenate(all_alt)
 
-    date_str = FLIGHTS[flight]
-    time_dt = utc_hours_to_datetime64(time_hours, date_str)
+    time_hours_regrid, theta_850_regrid = regrid_timeseries(
+        time_hours_native, theta_850_native, TEMPORAL_RESOLUTION
+    )
 
     return {
-        "time": time_dt,
-        "time_utc_hours": time_hours,
-        "theta_850": theta_850,
-        "altitude": altitude,
+        "time_utc_hours": time_hours_native,
+        "theta_850": theta_850_regrid,
+        "time_regrid_utc_hours": time_hours_regrid,
+        "altitude": altitude_native,
         "h_850": h_actual,
         "p_850": p_actual,
     }
 
 
-def plot_theta_850(flight: str, result: dict, theta_lim: tuple, alt_lim: tuple) -> str:
+def plot_theta_850(
+        flight: str,
+        result: dict,
+        theta_lim: tuple,
+        alt_lim: tuple,
+) -> str:
     os.makedirs(PLOTS_DIR, exist_ok=True)
     out_path = os.path.join(PLOTS_DIR, f"{flight.lower()}_theta850.png")
 
-    time = result["time_utc_hours"]
+    time_regrid = result["time_regrid_utc_hours"]
     theta = result["theta_850"]
+    time_native = result["time_utc_hours"]
     alt = result["altitude"]
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(time, theta, marker="o", markersize=3, linewidth=1, label="$\\theta_{850}$")
+    ax.plot(
+        time_regrid,
+        theta,
+        marker="o",
+        markersize=3,
+        linewidth=1,
+        label="$\\theta_{850}$",
+    )
     ax.xaxis.set_major_formatter(
         plt.FuncFormatter(lambda h, _: f"{int(h):02d}:{int((h % 1) * 60):02d}")
     )
@@ -147,7 +190,7 @@ def plot_theta_850(flight: str, result: dict, theta_lim: tuple, alt_lim: tuple) 
     ax.set_ylim(theta_lim)
 
     ax2 = ax.twinx()
-    ax2.plot(time, alt, color="black", linewidth=1.5, label="Aircraft altitude")
+    ax2.plot(time_native, alt, color="black", linewidth=1.0, label="Aircraft altitude")
     ax2.set_ylabel("Aircraft Altitude (km)")
     ax2.set_ylim(alt_lim)
 
