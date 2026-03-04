@@ -20,7 +20,7 @@ FILL_VALUE = 9999.0
 P_850 = 850  # hPa
 
 MAD_K = 5.0  # multiplier for MAD
-TEMPORAL_RESOLUTION = 30 # seconds
+TEMPORAL_RESOLUTION = 30  # seconds
 
 
 def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
@@ -94,9 +94,9 @@ def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
 
 
 def regrid_timeseries(
-        time_hours: np.ndarray,
-        data: np.ndarray,
-        dt_seconds: float,
+    time_hours: np.ndarray,
+    data: np.ndarray,
+    dt_seconds: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Regrid time series to uniform temporal resolution (of dt_seconds) using block averaging.
@@ -146,23 +146,13 @@ def find_gaps(mask: np.ndarray) -> list[tuple[int, int]]:
     return gaps
 
 
-def interpolate_gaps(
-        time: np.ndarray,
-        data: np.ndarray,
-        window_minutes: float = 30,
-        poly_degree: int = 2,
-        min_points: int = 10,
-) -> tuple[np.ndarray, np.ndarray]:
+def interpolate_gaps(data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
-    Interpolate interior gaps using polynomial curve fitting.
-
-    Only fills gaps that have valid data on both sides (skips edges to avoid
-    extrapolation). For each interior gap, fits a polynomial to data in a
-    window before and after the gap, then uses the fitted curve to fill it.
+    Fill interior gaps using the mean of the two boundary endpoints.
 
     Returns:
-        data_filled: array with interior gaps filled
-        is_interpolated: boolean mask indicating which points were interpolated
+        data_filled: array with interior gaps filled (constant per gap)
+        is_interpolated: boolean mask indicating which points were filled
     """
     missing = np.isnan(data)
     data_filled = data.copy()
@@ -171,52 +161,29 @@ def interpolate_gaps(
     if np.sum(valid) < 2:
         return data, missing
 
-    window_hours = window_minutes / 60.0
     gaps = find_gaps(missing)
     is_interpolated = np.zeros_like(data, dtype=bool)
 
     for gap_start, gap_end in gaps:
-        # only interpolate interior gaps (valid data on both sides)
+        # only fill interior gaps (valid data on both sides)
         if not np.any(valid[:gap_start]) or not np.any(valid[gap_end:]):
             continue
 
-        gap_time = time[gap_start:gap_end]
+        # endpoints: last valid before gap and first valid after gap
+        y_before = data[np.where(valid[:gap_start])[0][-1]]
+        y_after = data[gap_end + np.argmax(valid[gap_end:])]
 
-        # find valid data within window before and after gap
-        before_mask = (time < time[gap_start]) & (time >= time[gap_start] - window_hours) & valid
-        after_mask = (time > time[gap_end - 1]) & (time <= time[gap_end - 1] + window_hours) & valid
+        gap_mean = (y_before + y_after) / 2.0
+        gap_std = np.std([y_before, y_after])
 
-        fit_time = time[before_mask | after_mask]
-        fit_data = data[before_mask | after_mask]
+        data_filled[gap_start:gap_end] = gap_mean
+        is_interpolated[gap_start:gap_end] = True
 
-        if len(fit_data) < min_points:
-            # fall back to linear interpolation
-            idx_before = np.where((time < time[gap_start]) & valid)[0]
-            idx_after = np.where((time > time[gap_end - 1]) & valid)[0]
-
-            if len(idx_before) > 0 and len(idx_after) > 0:
-                i0, i1 = idx_before[-1], idx_after[0]
-                t0, t1 = time[i0], time[i1]
-                y0, y1 = data[i0], data[i1]
-                data_filled[gap_start:gap_end] = y0 + (y1 - y0) * (gap_time - t0) / (t1 - t0)
-                is_interpolated[gap_start:gap_end] = True
-            continue
-
-        # fit polynomial (normalize time for numerical stability)
-        t_mean = np.mean(fit_time)
-        t_std = np.std(fit_time)
-        if t_std < 1e-10:
-            continue
-
-        fit_time_norm = (fit_time - t_mean) / t_std
-        gap_time_norm = (gap_time - t_mean) / t_std
-
-        try:
-            coeffs = np.polyfit(fit_time_norm, fit_data, poly_degree)
-            data_filled[gap_start:gap_end] = np.polyval(coeffs, gap_time_norm)
-            is_interpolated[gap_start:gap_end] = True
-        except np.linalg.LinAlgError:
-            continue
+        # print(
+        #     f"  gap [{gap_start}:{gap_end}] "
+        #     f"endpoints=({y_before:.2f}, {y_after:.2f}) "
+        #     f"mean={gap_mean:.2f} std={gap_std:.2f}"
+        # )
 
     return data_filled, is_interpolated
 
@@ -250,13 +217,7 @@ def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
 
     # interpolate gaps if requested
     if interpolate:
-        theta_850_filled, is_interpolated = interpolate_gaps(
-            time_hours_regrid,
-            theta_850_regrid,
-            window_minutes=30,
-            poly_degree=2,
-            min_points=20,
-        )
+        theta_850_filled, is_interpolated = interpolate_gaps(theta_850_regrid)
     else:
         theta_850_filled = theta_850_regrid
         is_interpolated = np.zeros_like(theta_850_regrid, dtype=bool)
@@ -273,10 +234,10 @@ def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
 
 
 def plot_theta_850(
-        flight: str,
-        result: dict,
-        theta_lim: tuple,
-        alt_lim: tuple,
+    flight: str,
+    result: dict,
+    theta_lim: tuple,
+    alt_lim: tuple,
 ) -> str:
     os.makedirs(PLOTS_DIR, exist_ok=True)
     out_path = os.path.join(PLOTS_DIR, f"{flight.lower()}_theta850.png")
@@ -298,7 +259,7 @@ def plot_theta_850(
         markersize=3,
         linewidth=1,
         color="tab:blue",
-        label=f"$\\theta_{850}${" (measured)" if np.any(is_interpolated) else ""}",
+        label=f"$\\theta_{850}${' (measured)' if np.any(is_interpolated) else ''}",
     )
 
     # plot interpolated data with dashed line
