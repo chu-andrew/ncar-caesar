@@ -1,0 +1,11 @@
+variable,long_name,units
+concentration,"",#/m4
+concentration_err,"",#/m4
+lat,"",degrees North
+lon,"",degrees East
+alt,"",meters
+t,"",C
+cloud_phase,"",none
+time,"",Seconds from midnight of start date
+bin_edges,"",microns
+bin_centers,"",microns

@@ -1,0 +1,50 @@
+variable,long_name,units
+time_coverage_start,data_volume_start_time_utc,seconds since 1970-01-01T00:00:00Z
+time_coverage_end,data_volume_end_time_utc,seconds since 1970-01-01T00:00:00Z
+reflectivity_WCR,Equivalent reflectivity factor,dBZ
+wcrmask,Two byte target mask,""
+velocity_WCR,Mean Doppler radial velocity. Positive is up,m/s
+beamvector_WCR,"(East,North,Up) radar beam unit vectors",""
+ppsw_WCR,Spectral width,m/s
+snr_WCR,Unit Signal-to-Noise Ratio,dB
+reflectivity_KPR,Equivalent reflectivity factor,dBZ
+kprmask,Two byte target mask,""
+velocity_KPR,Mean Doppler radial velocity. Positive is up,m/s
+beamvector_KPR,"(East,North,Up) radar beam unit vectors",""
+ppsw_KPR,Spectral width,m/s
+snr_KPR,Unit Signal-to-Noise Ratio,dB
+cloudtop1_WCR,WCR estimated primary cloud-top height,m
+cloudtop2_WCR,WCR estimated 2nd cloud-top height,m
+BackscatterCoefficient_WCL,Backscatter Pr2 from the parallel channel of High gain,m^-1 sr^-1
+DepolarizationRatio_WCL,"Depolarization Ratio from the high gain channel, CopolPowerR2H and CrossPowerR2H",Unitless
+Prof_qc_flag_WCL,quality control check flag,      -1
+cloudbase_WCL,WCL estimated cloud-base height,meters
+LSR_Marli,Aerosols or cloud lidar scattering ratio (LSR) profiles,none 
+Dep_Marli,Lidar linear depolarization ratio,%
+WVMR_Marli,Water vapor mixing ratio (WVMR),g/kg 
+T_Marli,Atmospheric Temperature,Degree  
+LWP_GVR,Liquid Water Path,g/m2
+WVP_GVR,Water Vapor Path,g/m2
+TB14_GVR,183.31 +/- 14GHz Brightness Temperature,K
+TB7_GVR,183.31 +/- 7GHz Brightness Temperature,K
+TB3_GVR,183.31 +/- 3GHz Brightness Temperature,K
+TB1_GVR,183.31 +/- 1GHz Brightness Temperature,K
+osc_GVR,Are oscillations present in the GVR with an amplitude of at least 10K at this time?,True/False
+acname,Aircraft name,""
+acalt,platform Altitude from MSL,m
+latitude,platform Latitude,degree_N
+longitude,platform Longitude,degree_E
+heading,platform heading,degree_T
+roll,platform roll,degree
+pitch,platform pitch,degree
+track,platform track,degree_T
+TAS,platform True Air Speed,m/s
+grndspd,platform Ground Speed,m/s
+eastward_wind,wind eastward velocity,m/s
+northward_wind,wind northward velocity,m/s
+vertical_wind,wind vertical velocity,m/s
+topo,Topography from database,m
+surface_temperature,Radiometric surface temperature from down-pointing KT19,deg_C
+sky_temperature,Radiometric sky/cloud-base temperature from up-pointing KT19,deg_C
+time,Profile acquisition time,seconds since 1970-01-01T00:00:00Z
+altitude,MSL altitude to (geometric) center of grid,meters
