@@ -5,7 +5,11 @@ import numpy as np
 
 from nc.flights import MARLI_FILES
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
-from potential_temperature import height_to_pressure, mask_temperature_outliers, P_850
+from ds_638_021.potential_temperature import (
+    height_to_pressure,
+    mask_temperature_outliers,
+    P_850,
+)
 
 DATASET = "638-021"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/temperature_contour")

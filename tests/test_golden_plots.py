@@ -15,10 +15,11 @@ from PIL import Image
 from conftest import GOLDEN_DIR
 
 PLOT_SCRIPTS = [
-    ("summary", "638-001/plots/summary"),
-    ("potential_temperature", "638-021/plots/potential_temperature"),
-    ("segments", "638-038/plots/segments"),
-    ("water_path", "638-038/plots/water_path"),
+    ("ds_638_001.summary", "638-001/plots/summary"),
+    ("ds_638_021.potential_temperature", "638-021/plots/potential_temperature"),
+    ("ds_638_021.temperature_contour", "638-021/plots/temperature_contour"),
+    ("ds_638_038.segments", "638-038/plots/segments"),
+    ("ds_638_038.water_path", "638-038/plots/water_path"),
 ]
 
 
@@ -63,6 +64,7 @@ def _collect_pngs(directory: str) -> list[str]:
     ids=[name for name, _ in PLOT_SCRIPTS],
 )
 def test_plots_match_golden(module_name, golden_subdir, tmp_output, monkeypatch):
+    print("\n" + module_name)
     golden_dir = os.path.join(GOLDEN_DIR, golden_subdir)
     golden_pngs = _collect_pngs(golden_dir)
     if not golden_pngs:

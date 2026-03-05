@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
-from segments import load_flight_segments
+from ds_638_038.segments import load_flight_segments
 
 _vars = DATASET_VARS["638-038"]
 DATASET = "638-038"
@@ -63,7 +63,7 @@ def plot_water_path(flight: str, start_pt: int, end_pt: int):
 
 
 # NB: must change if segmentation strategy changes
-SEGMENTS = {
+LOW_LEVEL_LEGS = {
     "RF01": [(14, 15), (19, 20)],
     "RF02": [(13, 15), (19, 20), (25, 26)],
     "RF03": [(13, 14)],
@@ -77,8 +77,8 @@ SEGMENTS = {
 
 
 def main():
-    for flight in SEGMENTS:
-        for start, end in SEGMENTS[flight]:
+    for flight in LOW_LEVEL_LEGS:
+        for start, end in LOW_LEVEL_LEGS[flight]:
             plot_water_path(flight, start, end)
 
 
