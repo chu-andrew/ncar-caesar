@@ -327,7 +327,7 @@ def plot_scatter(df: pl.DataFrame) -> None:
         )
         ax.set_xlabel("MCAO $(K)$")
         ax.set_ylabel(ylabel)
-        ax.set_title(f"MCAO vs {ycol}")
+        ax.set_title(f"{ycol} vs MCAO")
         ax.legend(title="Flight / Leg", fontsize=7, loc="best")
         ax.grid(True, alpha=0.3)
 
@@ -354,7 +354,7 @@ def plot_scatter(df: pl.DataFrame) -> None:
     )
     ax.set_xlabel("MCAO $(K)$")
     ax.set_ylabel("LWP / WVP")
-    ax.set_title("MCAO vs LWP/WVP Ratio")
+    ax.set_title("LWP/WVP Ratio vs MCAO")
     ax.legend(title="Flight / Leg", fontsize=7, loc="best")
     ax.grid(True, alpha=0.3)
 
@@ -386,7 +386,7 @@ def plot_hexbin(df: pl.DataFrame) -> None:
         fig.colorbar(hb, ax=ax, label="Count")
         ax.set_xlabel("MCAO $(K)$")
         ax.set_ylabel(ylabel)
-        ax.set_title(f"MCAO vs {ycol} (density)")
+        ax.set_title(f"{ycol} vs MCAO (density)")
         ax.grid(True, alpha=0.3)
 
         out_path = os.path.join(PLOTS_DIR, f"hexbin_mcao_vs_{ycol.lower()}.png")
