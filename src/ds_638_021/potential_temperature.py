@@ -146,20 +146,24 @@ def find_gaps(mask: np.ndarray) -> list[tuple[int, int]]:
     return gaps
 
 
-def interpolate_gaps(data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def interpolate_gaps(
+    data: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Fill interior gaps using the mean of the two boundary endpoints.
 
     Returns:
         data_filled: array with interior gaps filled (constant per gap)
         is_interpolated: boolean mask indicating which points were filled
+        interp_std: std of the two boundary endpoints (NaN where not interpolated)
     """
     missing = np.isnan(data)
     data_filled = data.copy()
+    interp_std = np.full_like(data, np.nan)
     valid = ~missing
 
     if np.sum(valid) < 2:
-        return data, missing
+        return data, missing, interp_std
 
     gaps = find_gaps(missing)
     is_interpolated = np.zeros_like(data, dtype=bool)
@@ -178,14 +182,9 @@ def interpolate_gaps(data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
         data_filled[gap_start:gap_end] = gap_mean
         is_interpolated[gap_start:gap_end] = True
+        interp_std[gap_start:gap_end] = gap_std
 
-        # print(
-        #     f"  gap [{gap_start}:{gap_end}] "
-        #     f"endpoints=({y_before:.2f}, {y_after:.2f}) "
-        #     f"mean={gap_mean:.2f} std={gap_std:.2f}"
-        # )
-
-    return data_filled, is_interpolated
+    return data_filled, is_interpolated, interp_std
 
 
 def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
@@ -217,10 +216,13 @@ def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
 
     # interpolate gaps if requested
     if interpolate:
-        theta_850_filled, is_interpolated = interpolate_gaps(theta_850_regrid)
+        theta_850_filled, is_interpolated, interp_std = interpolate_gaps(
+            theta_850_regrid
+        )
     else:
         theta_850_filled = theta_850_regrid
         is_interpolated = np.zeros_like(theta_850_regrid, dtype=bool)
+        interp_std = np.full_like(theta_850_regrid, np.nan)
 
     return {
         "time_utc_hours": time_hours_native,
@@ -230,6 +232,7 @@ def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
         "h_850": h_actual,
         "p_850": p_actual,
         "is_interpolated": is_interpolated,
+        "theta_850_std": interp_std,
     }
 
 
