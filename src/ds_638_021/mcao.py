@@ -29,7 +29,11 @@ THETA_TOLERANCE = "30s"
 
 
 def load_rstb(flight: str) -> pl.DataFrame:
-    """Load radiometric surface temperature (RSTB) from 638-001."""
+    """
+    Load radiometric surface temperature (RSTB) from 638-001.
+
+    RSTB is in degC.
+    """
     with open_dataset("638-001", flight) as ds:
         times = ds[TIME_001].values
         rstb = ds["RSTB"].values
@@ -210,7 +214,7 @@ def merge_flight_segment(
         tolerance=THETA_TOLERANCE,
     )
 
-    # compute MCAO index: SST(K) - theta_850
+    # compute MCAO index: SST(K) - theta_850; RSTB is in degC
     df = df.with_columns(
         (pl.col("RSTB") + 273.15).alias("SST_K"),
     ).with_columns(

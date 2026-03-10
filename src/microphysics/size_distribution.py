@@ -32,7 +32,8 @@ def aggregate_size_distribution(
     else:
         raise ValueError(f"Unknown aggregation method: {method}")
 
-    N_total_per_bin = dNdD * bin_widths
+    # bin_widths is in um; convert to m to match dNdD (#/m^4) -> N (#/m^3)
+    N_total_per_bin = dNdD * (bin_widths * 1e-6)
 
     metadata = {
         "method": method,
@@ -144,7 +145,9 @@ def compute_moment(
     else:
         M = np.nansum(integrand * concentration)
 
-    # convert back to um units if needed
+    # Integration was done in SI (m), so M_k has diameter units in m^k.
+    # Convert diameter contribution from m^k to um^k so that e.g.
+    # D_eff = M_3/M_2 comes out in um directly.
     if moment > 0:
         M = M * (1e6**moment)
 

@@ -40,12 +40,14 @@ def compute_snow_mass_flux(
     Returns:
         S in kg/m^2/s, shape () or (n_times,)
     """
-    D_m = bin_centers * 1e-6
-    dD_m = bin_widths * 1e-6
+    D_m = bin_centers * 1e-6  # um -> m
+    dD_m = bin_widths * 1e-6  # um -> m
 
-    m_D = 0.044 * D_m**2
-    vt_D = 2.29 * D_m**0.18
+    m_D = 0.044 * D_m**2  # kg (mass-size, a_m=0.044 kg/m^2)
+    vt_D = 2.29 * D_m**0.18  # m/s (fall speed)
 
+    # integrand units: kg * m/s; after multiplying by N(D) [#/m^4] and dD [m]
+    # => kg/(m^2*s)
     integrand = m_D * vt_D
 
     if concentration.ndim == 1:

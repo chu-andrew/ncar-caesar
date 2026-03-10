@@ -74,8 +74,8 @@ def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
 
 
 def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
-    H = ds["H"].values  # bin height (MSL), km
-    T = ds["T"].values  # atmospheric temperature, degC
+    H = ds["H"].values  # bin heights (MSL), km
+    T = ds["T"].values  # atmospheric temperature, degC (n_times x n_bins)
     time = ds["time"].values  # UTC time
 
     # convert all height bins to pressure
