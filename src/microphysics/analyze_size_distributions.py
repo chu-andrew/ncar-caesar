@@ -86,28 +86,33 @@ def main():
     )
     conc_max = np.log10(np.nanmax(concentration))
 
-    # generate heatmap for each flight
+    # generate heatmap for each flight, with one panel per low-level leg
     flights = df["flight"].unique().sort()
     for flight in flights:
         df_flight = df.filter(df["flight"] == flight)
         if df_flight.is_empty():
             continue
 
-        df_subset = df_flight[0 : df_flight.height]
-        times = []
-        conc_list = []
-        for row in df_subset.iter_rows(named=True):
-            times.append(row["time"])
-            conc_list.append(np.array(row["concentration"]))
-        times = np.array(times)
-        conc_heatmap = np.column_stack(conc_list)
+        segments = []
+        for seg_id in df_flight["segment_id"].unique().sort():
+            df_seg = df_flight.filter(df_flight["segment_id"] == seg_id)
+            times = []
+            conc_list = []
+            for row in df_seg.iter_rows(named=True):
+                times.append(row["time"])
+                conc_list.append(np.array(row["concentration"]))
+            segments.append((seg_id, np.column_stack(conc_list), np.array(times)))
+
+        # sort segments by start time
+        segments.sort(key=lambda s: s[2][0])
+
         plot_size_distribution_heatmap(
-            conc_heatmap,
-            times,
+            segments,
             bin_centers,
             os.path.join(PLOTS_DIR, f"dNdD_heatmap_{flight}.png"),
             vmin=conc_min,
             vmax=conc_max,
+            title=f"{flight}: Size distribution on low-level legs",
         )
 
 

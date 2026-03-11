@@ -186,39 +186,55 @@ def plot_binned_size_distributions(
 
 
 def plot_size_distribution_heatmap(
-    concentration: np.ndarray,
-    times: np.ndarray,
+    segments: list,
     bin_centers: np.ndarray,
     output_path: str,
-    vmin: float = None,
-    vmax: float = None,
+    vmin: float,
+    vmax: float,
+    title: str,
 ) -> str:
     """Time-resolved heatmap: D vs time colored by log_10(dN/dD)."""
-    fig, ax = plt.subplots(figsize=(14, 6))
+    n_segments = len(segments)
+    width_ratios = [
+        mdates.date2num(seg[2][-1]) - mdates.date2num(seg[2][0]) for seg in segments
+    ]
 
-    times_num = mdates.date2num(times)
-    conc_log = np.log10(concentration + 1e-10)  # avoid log(0)
-
-    mesh = ax.pcolormesh(
-        times_num,
-        bin_centers,
-        conc_log,
-        cmap="viridis",
-        shading="auto",
-        vmin=vmin,
-        vmax=vmax,
+    fig, axes = plt.subplots(
+        1,
+        n_segments,
+        sharey=True,
+        figsize=(max(14, 3 * n_segments), 6),
+        width_ratios=width_ratios,
+        squeeze=False,
     )
+    axes = axes[0]
 
-    ax.set_yscale("log")
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+    mesh = None
+    for ax, (label, concentration, times) in zip(axes, segments):
+        times_num = mdates.date2num(times)
+        conc_log = np.log10(concentration + 1e-10)
 
-    ax.set_xlabel("Time (UTC)", fontsize=12)
-    ax.set_ylabel(r"Diameter ($\mu$m)", fontsize=12)
-    ax.set_title("Size distribution over time", fontsize=14)
+        mesh = ax.pcolormesh(
+            times_num,
+            bin_centers,
+            conc_log,
+            cmap="viridis",
+            shading="auto",
+            vmin=vmin,
+            vmax=vmax,
+        )
 
-    cbar = fig.colorbar(mesh, ax=ax)
+        ax.set_yscale("log")
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+        ax.set_xlabel("Time (UTC)", fontsize=12)
+        ax.set_title(label, fontsize=12)
+
+    axes[0].set_ylabel(r"Diameter ($\mu$m)", fontsize=12)
+
+    fig.suptitle(title, fontsize=14)
+    cbar = fig.colorbar(mesh, ax=axes.tolist())
     cbar.set_label(r"$\log_{10}(\partial N/\partial D)$ [#/m$^4$]", fontsize=12)
 
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
