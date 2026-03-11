@@ -12,7 +12,7 @@ import seaborn as sns
 
 from nc.loader import PROJECT_ROOT
 from ds_638_021.mcao import build_merged_dataset
-from microphysics.data_loader import build_low_level_dataset, PHASE_ICE, PHASE_MIXED
+from microphysics.data_loader import build_low_level_dataset, PHASE_ICE
 
 from microphysics.plotting import plot_snow_rate_normalized_timeseries
 
