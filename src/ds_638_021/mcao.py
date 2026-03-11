@@ -1,8 +1,8 @@
 """
 Marine Cold-Air Outbreak index computation and composite plots.
 
-Low-level legs: SST from RSTB, theta_850 from interpolated MARLi (mean of adjacent boundaries).
-Upper legs: theta_850 directly from MARLi, SST extrapolated via dry adiabatic lapse rate.
+Analysis is limited to low-level legs.
+SST from RSTB, theta_850 from interpolated MARLi.
 """
 
 import os
@@ -12,18 +12,14 @@ import numpy as np
 import polars as pl
 import seaborn as sns
 
-from nc.flights import FLIGHTS, MARLI_FILES
+from nc.flights import FLIGHTS
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
 
 from ds_638_021.potential_temperature import compute_theta_850
 from ds_638_038.water_path import LOW_LEVEL_LEGS
 from ds_638_038.load import load_gvr_segment
-from ds_638_038.segments import load_flight_segments
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/638-021/plots/mcao")
-
-_vars_001 = DATASET_VARS["638-001"]
-TIME_001 = _vars_001["time"]
 
 THETA_TOLERANCE = "30s"
 
@@ -35,7 +31,8 @@ def load_rstb(flight: str) -> pl.DataFrame:
     RSTB is in degC.
     """
     with open_dataset("638-001", flight) as ds:
-        times = ds[TIME_001].values
+        _vars_001 = DATASET_VARS["638-001"]
+        times = ds[_vars_001["time"]].values
         rstb = ds["RSTB"].values
 
     return pl.DataFrame(
@@ -70,111 +67,6 @@ def load_theta850(flight: str) -> pl.DataFrame:
         }
     )
     return df.filter(~pl.col("theta_850").is_nan())
-
-
-def extrapolate_sst_from_marli(flight: str) -> pl.DataFrame:
-    """
-    Extrapolate SST from MARLi's lowest valid temperature using dry adiabatic lapse rate.
-
-    Computes SST for the entire flight.
-    """
-    GAMMA_D = 9.8  # dry adiabatic lapse rate, K/km
-
-    filenames = MARLI_FILES[flight]
-    date_str = FLIGHTS[flight]
-    base = np.datetime64(date_str, "ns")
-    ns_per_hour = np.int64(3_600_000_000_000)
-
-    result_times = []
-    result_sst = []
-
-    for filename in filenames:
-        with open_dataset("638-021", filename) as ds:
-            time_hours = ds["time"].values
-            H = ds["H"].values  # (n_bins,) km MSL
-            T = ds["T"].values  # (n_times, n_bins) degC
-
-        times = base + (time_hours * ns_per_hour).astype("timedelta64[ns]")
-
-        # mask invalid temperatures
-        T = T.astype(np.float64, copy=True)
-        T[(T >= 9999.0) | (T < -100) | (T > 100)] = np.nan
-
-        for i in range(len(times)):
-            row = T[i, :]
-            valid_mask = ~np.isnan(row)
-            if not np.any(valid_mask):
-                result_times.append(times[i])
-                result_sst.append(np.nan)
-                continue
-            valid_indices = np.where(valid_mask)[0]
-            lowest_idx = valid_indices[np.argmin(H[valid_indices])]
-            sst_celsius = row[lowest_idx] + GAMMA_D * H[lowest_idx]
-            result_times.append(times[i])
-            result_sst.append(sst_celsius + 273.15)
-
-    if not result_times:
-        return pl.DataFrame(
-            {
-                "time": np.array([], dtype="datetime64[ns]"),
-                "SST_K": np.array([], dtype=np.float64),
-            }
-        )
-
-    return pl.DataFrame({"time": np.array(result_times), "SST_K": np.array(result_sst)})
-
-
-def merge_upper_leg(
-    flight: str,
-    start_pt: int,
-    end_pt: int,
-    df_theta: pl.DataFrame,
-    df_sst: pl.DataFrame,
-) -> pl.DataFrame:
-    """
-    Compute MCAO for an upper leg adjacent to a low-level leg.
-
-    theta_850: directly from MARLi (df_theta filtered to leg time range).
-    SST: extrapolated from MARLi lowest valid T via dry adiabatic lapse rate.
-    """
-
-    df_gvr = load_gvr_segment(flight, start_pt, end_pt)
-    if df_gvr.is_empty():
-        return pl.DataFrame()
-
-    df = df_gvr.sort("time")
-
-    # join theta_850 onto GVR timestamps
-    df = df.join_asof(
-        df_theta.sort("time"),
-        on="time",
-        strategy="nearest",
-        tolerance=THETA_TOLERANCE,
-    )
-
-    # join pre-computed SST
-    if not df_sst.is_empty():
-        df = df.join_asof(
-            df_sst.sort("time"),
-            on="time",
-            strategy="nearest",
-            tolerance="30s",
-        )
-    else:
-        df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("SST_K"))
-
-    df = df.with_columns(
-        (pl.col("SST_K") - pl.col("theta_850")).alias("MCAO"),
-    )
-
-    df = df.with_columns(
-        pl.lit(flight).alias("flight"),
-        pl.lit(f"{start_pt}-{end_pt}").alias("segment"),
-        pl.lit("upper").alias("leg_type"),
-        pl.lit(None).cast(pl.Float64).alias("theta_850_std"),
-    )
-
-    return df
 
 
 def merge_flight_segment(
@@ -224,7 +116,6 @@ def merge_flight_segment(
     df = df.with_columns(
         pl.lit(flight).alias("flight"),
         pl.lit(f"{start_pt}-{end_pt}").alias("segment"),
-        pl.lit("low_level").alias("leg_type"),
     )
 
     return df
@@ -241,8 +132,6 @@ def build_merged_dataset() -> pl.DataFrame:
 
         df_rstb = load_rstb(flight)
         df_theta = load_theta850(flight)
-        df_sst = extrapolate_sst_from_marli(flight)
-        fs = load_flight_segments(flight)
 
         # expand multi-segment low-level legs into unit segments
         low_level_units = set()
@@ -250,61 +139,42 @@ def build_merged_dataset() -> pl.DataFrame:
             for j in range(s, e):
                 low_level_units.add((j, j + 1))
 
-        for i in range(fs.n_segments):
-            start_pt, end_pt = i, i + 1
-
-            if (start_pt, end_pt) in low_level_units:
-                df_seg = merge_flight_segment(
-                    flight, start_pt, end_pt, df_rstb, df_theta
+        for start_pt, end_pt in sorted(low_level_units):
+            df_seg = merge_flight_segment(flight, start_pt, end_pt, df_rstb, df_theta)
+            if not df_seg.is_empty():
+                n_valid = df_seg.filter(
+                    pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan()
+                ).height
+                mean_t = df_seg["theta_850"].mean()
+                std_vals = df_seg["theta_850_std"].drop_nulls().drop_nans()
+                std_t = std_vals.mean() if len(std_vals) > 0 else float("nan")
+                print(
+                    f"\tlow-level {start_pt}-{end_pt}: "
+                    f"{n_valid}/{df_seg.height} valid MCAO, "
+                    f"theta_850={mean_t:.2f} +/- {std_t:.2f} K"
                 )
-                if not df_seg.is_empty():
-                    n_valid = df_seg.filter(
-                        pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan()
-                    ).height
-                    mean_t = df_seg["theta_850"].mean()
-                    std_vals = df_seg["theta_850_std"].drop_nulls().drop_nans()
-                    std_t = std_vals.mean() if len(std_vals) > 0 else float("nan")
-                    print(
-                        f"\tlow-level {start_pt}-{end_pt}: "
-                        f"{n_valid}/{df_seg.height} valid MCAO, "
-                        f"theta_850={mean_t:.2f} +/- {std_t:.2f} K"
-                    )
-                    frames.append(df_seg)
-            else:
-                df_seg = merge_upper_leg(flight, start_pt, end_pt, df_theta, df_sst)
-                if not df_seg.is_empty():
-                    n_valid = df_seg.filter(
-                        pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan()
-                    ).height
-                    print(
-                        f"\tupper {start_pt}-{end_pt}: "
-                        f"{n_valid}/{df_seg.height} valid MCAO"
-                    )
-                    frames.append(df_seg)
+                frames.append(df_seg)
 
     if not frames:
         raise RuntimeError("no data merged: check segment definitions and data files")
 
-    # align columns across low-level and upper legs
     common_cols = [
         "time",
         "LWP",
         "WVP",
-        "alt",
         "SST_K",
         "theta_850",
         "theta_850_std",
         "MCAO",
         "flight",
         "segment",
-        "leg_type",
     ]
     frames = [f.select(common_cols) for f in frames]
     return pl.concat(frames)
 
 
 def plot_scatter(df: pl.DataFrame) -> None:
-    """Scatter plots: MCAO vs WVP, LWP, and LWP/WVP, colored by leg type."""
+    """Scatter plots: MCAO vs WVP, LWP, and LWP/WVP, colored by flight."""
     df_pd = df.filter(
         pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan()
     ).to_pandas()
@@ -314,8 +184,6 @@ def plot_scatter(df: pl.DataFrame) -> None:
         ("MCAO", "LWP", "LWP $(g/m^2)$"),
     ]
 
-    markers = {"low_level": "o", "upper": "s"}
-
     for xcol, ycol, ylabel in pairs:
         fig, ax = plt.subplots(figsize=(8, 6))
         sns.scatterplot(
@@ -323,16 +191,14 @@ def plot_scatter(df: pl.DataFrame) -> None:
             x=xcol,
             y=ycol,
             hue="flight",
-            style="leg_type",
-            markers=markers,
             alpha=0.5,
             s=15,
             ax=ax,
         )
         ax.set_xlabel("MCAO $(K)$")
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{ycol} vs MCAO")
-        ax.legend(title="Flight / Leg", fontsize=7, loc="best")
+        ax.set_title(f"{ycol} vs MCAO (low-level legs)")
+        ax.legend(title="Flight", fontsize=7, loc="best")
         ax.grid(True, alpha=0.3)
 
         out_path = os.path.join(PLOTS_DIR, f"scatter_mcao_vs_{ycol.lower()}.png")
@@ -350,16 +216,14 @@ def plot_scatter(df: pl.DataFrame) -> None:
         x="MCAO",
         y="LWP_WVP",
         hue="flight",
-        style="leg_type",
-        markers=markers,
         alpha=0.5,
         s=15,
         ax=ax,
     )
     ax.set_xlabel("MCAO $(K)$")
     ax.set_ylabel("LWP / WVP")
-    ax.set_title("LWP/WVP Ratio vs MCAO")
-    ax.legend(title="Flight / Leg", fontsize=7, loc="best")
+    ax.set_title("LWP/WVP Ratio vs MCAO (low-level legs)")
+    ax.legend(title="Flight", fontsize=7, loc="best")
     ax.grid(True, alpha=0.3)
 
     out_path = os.path.join(PLOTS_DIR, "scatter_mcao_vs_lwp_wvp.png")
@@ -369,7 +233,7 @@ def plot_scatter(df: pl.DataFrame) -> None:
 
 
 def plot_hexbin(df: pl.DataFrame) -> None:
-    """2D histogram / hexbin density plots."""
+    """2D histogram / hexbin density plots for low-level legs."""
     df_pd = df.filter(
         pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan()
     ).to_pandas()
@@ -390,7 +254,7 @@ def plot_hexbin(df: pl.DataFrame) -> None:
         fig.colorbar(hb, ax=ax, label="Count")
         ax.set_xlabel("MCAO $(K)$")
         ax.set_ylabel(ylabel)
-        ax.set_title(f"{ycol} vs MCAO (density)")
+        ax.set_title(f"{ycol} vs MCAO (low-level legs)")
         ax.grid(True, alpha=0.3)
 
         out_path = os.path.join(PLOTS_DIR, f"hexbin_mcao_vs_{ycol.lower()}.png")
@@ -459,38 +323,49 @@ def plot_binned_stats(df: pl.DataFrame) -> None:
         print(f"Saved: {out_path}")
 
 
+def load_full_flight_altitude(flight: str) -> pl.DataFrame:
+    """Load full-flight altitude from 638-001."""
+    _vars_001 = DATASET_VARS["638-001"]
+    with open_dataset("638-001", flight) as ds:
+        times = ds[_vars_001["time"]].values
+        alt = ds[_vars_001["altitude"]].values
+
+    return pl.DataFrame(
+        {
+            "time": times,
+            "alt": alt.astype(np.float64),
+        }
+    )
+
+
 def plot_timeseries(df: pl.DataFrame) -> None:
-    """Per-flight time series of MCAO and altitude, colored by leg type."""
+    """Per-flight time series of MCAO (low-level legs) with full-flight altitude."""
     import matplotlib.dates as mdates
 
     df_valid = df.filter(pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan())
     flights = df_valid["flight"].unique().sort().to_list()
 
-    # compute global axis limits
+    # compute global MCAO axis limits
     mcao_min = df_valid["MCAO"].min()
     mcao_max = df_valid["MCAO"].max()
-    alt_min = df_valid["alt"].min()
-    alt_max = df_valid["alt"].max()
-
-    colors = {"low_level": "tab:blue", "upper": "tab:orange"}
 
     for flight in flights:
         df_f = df_valid.filter(pl.col("flight") == flight).sort("time")
         df_pd = df_f.to_pandas()
 
+        # full-flight altitude trace
+        df_alt = load_full_flight_altitude(flight).to_pandas()
+
         fig, ax1 = plt.subplots(figsize=(12, 5))
 
-        for leg_type, color in colors.items():
-            mask = df_pd["leg_type"] == leg_type
-            if mask.any():
-                ax1.scatter(
-                    df_pd.loc[mask, "time"],
-                    df_pd.loc[mask, "MCAO"],
-                    c=color,
-                    s=8,
-                    alpha=0.6,
-                    label=f"MCAO ({leg_type})",
-                )
+        ax1.scatter(
+            df_pd["time"],
+            df_pd["MCAO"],
+            c="tab:blue",
+            s=8,
+            alpha=0.6,
+            label="MCAO",
+        )
 
         ax1.set_ylabel("MCAO (K)")
         ax1.set_xlabel("Time (UTC)")
@@ -498,15 +373,14 @@ def plot_timeseries(df: pl.DataFrame) -> None:
 
         ax2 = ax1.twinx()
         ax2.plot(
-            df_pd["time"],
-            df_pd["alt"],
+            df_alt["time"],
+            df_alt["alt"],
             color="black",
             linewidth=0.8,
             alpha=0.5,
             label="Altitude",
         )
         ax2.set_ylabel("Altitude (m)")
-        ax2.set_ylim(alt_min, alt_max)
 
         # combined legend
         lines1, labels1 = ax1.get_legend_handles_labels()
@@ -514,7 +388,7 @@ def plot_timeseries(df: pl.DataFrame) -> None:
         ax1.legend(lines1 + lines2, labels1 + labels2, loc="best", fontsize=8)
 
         ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-        ax1.set_title(f"{flight}: MCAO and Altitude")
+        ax1.set_title(f"{flight}: MCAO and Altitude (low-level legs)")
         ax1.grid(True, alpha=0.3)
 
         out_path = os.path.join(PLOTS_DIR, f"timeseries_{flight.lower()}.png")
@@ -530,12 +404,8 @@ def main():
     df_valid = df.filter(pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan())
     n_valid = df_valid.height
 
-    # summary by leg type
-    n_low = df_valid.filter(pl.col("leg_type") == "low_level").height
-    n_upper = df_valid.filter(pl.col("leg_type") == "upper").height
     print(
-        f"\nMerged dataset: {df.height} rows, {n_valid} with valid MCAO"
-        f"\n\tLow-level: {n_low}, Upper: {n_upper}"
+        f"\nMerged dataset (low-level legs): {df.height} rows, {n_valid} with valid MCAO"
         f"\n\tMCAO range: [{df_valid['MCAO'].min():.2f}, {df_valid['MCAO'].max():.2f}] K"
     )
 
