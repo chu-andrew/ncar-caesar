@@ -79,12 +79,12 @@ def main():
     )
 
     # compute global concentration range for consistent color scale
-    conc_min = np.log10(
+    conc_min = np.log(
         np.nanmin(concentration[concentration > 0])
         if np.any(concentration > 0)
         else 1e-10
     )
-    conc_max = np.log10(np.nanmax(concentration))
+    conc_max = np.log(np.nanmax(concentration))
 
     # generate heatmap for each flight, with one panel per low-level leg
     flights = df["flight"].unique().sort()

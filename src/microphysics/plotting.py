@@ -193,7 +193,7 @@ def plot_size_distribution_heatmap(
     vmax: float,
     title: str,
 ) -> str:
-    """Time-resolved heatmap: D vs time colored by log_10(dN/dD)."""
+    """Time-resolved heatmap: D vs time colored by ln(dN/dD)."""
     n_segments = len(segments)
     width_ratios = [
         mdates.date2num(seg[2][-1]) - mdates.date2num(seg[2][0]) for seg in segments
@@ -212,7 +212,7 @@ def plot_size_distribution_heatmap(
     mesh = None
     for ax, (label, concentration, times) in zip(axes, segments):
         times_num = mdates.date2num(times)
-        conc_log = np.log10(concentration + 1e-10)
+        conc_log = np.log(concentration + 1e-10)
 
         mesh = ax.pcolormesh(
             times_num,
@@ -235,7 +235,7 @@ def plot_size_distribution_heatmap(
 
     fig.suptitle(title, fontsize=14)
     cbar = fig.colorbar(mesh, ax=axes.tolist())
-    cbar.set_label(r"$\log_{10}(\partial N/\partial D)$ [#/m$^4$]", fontsize=12)
+    cbar.set_label(r"$\ln(\partial N/\partial D)$ [#/m$^4$]", fontsize=12)
 
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
