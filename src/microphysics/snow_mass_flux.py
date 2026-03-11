@@ -12,7 +12,9 @@ import seaborn as sns
 
 from nc.loader import PROJECT_ROOT
 from ds_638_021.mcao import build_merged_dataset
-from microphysics.data_loader import build_low_level_dataset, PHASE_ICE
+from microphysics.data_loader import build_low_level_dataset, PHASE_ICE, PHASE_MIXED
+
+from microphysics.plotting import plot_snow_rate_normalized_timeseries
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/microphysics_beta/plots/snow_flux")
 
@@ -195,6 +197,19 @@ def main():
     print("Generating plots...")
     plot_flux_vs_mcao(df)
     plot_binned_flux(df)
+
+    # compute global y-limits for S/LWP and S/WVP across all flights
+    s_over_lwp = (df["S"] / df["LWP"]).filter(df["LWP"] > 0).to_numpy()
+    s_over_wvp = (df["S"] / df["WVP"]).filter(df["WVP"] > 0).to_numpy()
+    combined = np.concatenate([s_over_lwp, s_over_wvp])
+    combined = combined[combined > 0]
+    ylim = (float(combined.min()), float(combined.max()))
+
+    flights = df["flight"].unique().sort().to_list()
+    for flight in flights:
+        out = os.path.join(PLOTS_DIR, f"snow_rate_normalized_timeseries_{flight}.png")
+        plot_snow_rate_normalized_timeseries(df, flight, out, ylim=ylim)
+        print(f"Saved: {out}")
 
     print("\nDone.")
 

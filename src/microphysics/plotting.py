@@ -230,13 +230,94 @@ def plot_size_distribution_heatmap(
         ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
         ax.set_xlabel("Time (UTC)", fontsize=12)
-        ax.set_title(label, fontsize=12)
+        ax.set_title(f"Leg {label}", fontsize=12)
 
     axes[0].set_ylabel(r"Diameter ($\mu$m)", fontsize=12)
 
     fig.suptitle(title, fontsize=14)
     cbar = fig.colorbar(mesh, ax=axes.tolist())
     cbar.set_label(r"$\ln(\partial N/\partial D)$ [#/m$^4$]", fontsize=12)
+
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
+def plot_snow_rate_normalized_timeseries(
+    df: pl.DataFrame,
+    flight: str,
+    output_path: str,
+    ylim: Tuple[float, float] = None,
+) -> str:
+    """
+    Time series of S/LWP and S/WVP for each low-level leg of a flight.
+    """
+    df_flight = df.filter(pl.col("flight") == flight)
+    if df_flight.is_empty():
+        return output_path
+
+    # compute normalized rates via vectorized Polars expressions
+    df_flight = df_flight.with_columns(
+        pl.when(pl.col("LWP") > 0)
+        .then(pl.col("S") / pl.col("LWP"))
+        .alias("S_over_LWP"),
+        pl.when(pl.col("WVP") > 0)
+        .then(pl.col("S") / pl.col("WVP"))
+        .alias("S_over_WVP"),
+    )
+
+    # partition once into per-segment dicts; sort time within each segment
+    partitions = df_flight.sort("time").partition_by("segment_id", as_dict=True)
+    seg_data = {}
+    seg_durations_ns = []
+    for (seg_id,), df_seg in sorted(partitions.items()):
+        times = df_seg["time"].to_numpy()
+        seg_data[seg_id] = (
+            times,
+            df_seg["S_over_LWP"].to_numpy(),
+            df_seg["S_over_WVP"].to_numpy(),
+        )
+        if len(times) >= 2:
+            seg_durations_ns.append(int(times[-1]) - int(times[0]))
+
+    seg_ids = list(seg_data.keys())
+    max_duration_ns = max(seg_durations_ns) if seg_durations_ns else 0
+
+    n_segs = len(seg_ids)
+    fig, axes = plt.subplots(
+        1, n_segs, sharey=True, figsize=(max(10, 4 * n_segs), 5), squeeze=False
+    )
+    axes = axes[0]
+
+    for ax, seg_id in zip(axes, seg_ids):
+        times, s_lwp, s_wvp = seg_data[seg_id]
+
+        ax.plot(times, s_lwp, color="tab:blue", linewidth=1.2, label=r"$S$/LWP")
+        ax.plot(times, s_wvp, color="tab:orange", linewidth=1.2, label=r"$S$/WVP")
+
+        # enforce consistent time span across subplots within this flight
+        if len(times) >= 1:
+            t0 = times[0]
+            t1 = t0 + np.timedelta64(max_duration_ns, "ns")
+            ax.set_xlim(t0, t1)
+
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+        ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+        ax.set_xlabel("Time (UTC)", fontsize=11)
+        ax.set_title(f"Leg {seg_id}", fontsize=11)
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=9)
+
+    axes[0].set_yscale("log")
+    if ylim is not None:
+        axes[0].set_ylim(ylim)
+
+    axes[0].set_ylabel(
+        r"Snow rate / water path (kg m$^{-2}$ s$^{-1}$ / g m$^{-2}$)", fontsize=10
+    )
+    fig.suptitle(f"{flight}: Snow rate normalized by LWP and WVP", fontsize=13)
+    plt.tight_layout()
 
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
