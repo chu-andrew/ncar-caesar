@@ -212,6 +212,7 @@ def plot_size_distribution_heatmap(
     mesh = None
     for ax, (label, concentration, times) in zip(axes, segments):
         times_num = mdates.date2num(times)
+        # add small offset to avoid log(0) = -inf
         conc_log = np.log(concentration + 1e-10)
 
         mesh = ax.pcolormesh(
