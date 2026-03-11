@@ -184,27 +184,42 @@ def plot_scatter(df: pl.DataFrame) -> None:
         ("MCAO", "LWP", "LWP $(g/m^2)$"),
     ]
 
-    for xcol, ycol, ylabel in pairs:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.scatterplot(
-            data=df_pd,
-            x=xcol,
-            y=ycol,
-            hue="flight",
-            alpha=0.5,
-            s=15,
-            ax=ax,
-        )
-        ax.set_xlabel("MCAO $(K)$")
-        ax.set_ylabel(ylabel)
-        ax.set_title(f"{ycol} vs MCAO (low-level legs)")
-        ax.legend(title="Flight", fontsize=7, loc="best")
-        ax.grid(True, alpha=0.3)
+    for log_scale in [False, True]:
+        for xcol, ycol, ylabel in pairs:
+            if log_scale:
+                df_plot = df_pd[df_pd[ycol] > 0].copy()
+                df_plot[f"ln_{ycol}"] = np.log(df_plot[ycol])
+                y_column = f"ln_{ycol}"
+                y_label = f"ln({ycol})"
+                title = f"ln({ycol}) vs MCAO (low-level legs)"
+                suffix = f"ln{ycol.lower()}"
+            else:
+                df_plot = df_pd
+                y_column = ycol
+                y_label = ylabel
+                title = f"{ycol} vs MCAO (low-level legs)"
+                suffix = ycol.lower()
 
-        out_path = os.path.join(PLOTS_DIR, f"scatter_mcao_vs_{ycol.lower()}.png")
-        fig.savefig(out_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        print(f"Saved: {out_path}")
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sns.scatterplot(
+                data=df_plot,
+                x=xcol,
+                y=y_column,
+                hue="flight",
+                alpha=0.5,
+                s=15,
+                ax=ax,
+            )
+            ax.set_xlabel("MCAO $(K)$")
+            ax.set_ylabel(y_label)
+            ax.set_title(title)
+            ax.legend(title="Flight", fontsize=7, loc="best")
+            ax.grid(True, alpha=0.3)
+
+            out_path = os.path.join(PLOTS_DIR, f"scatter_mcao_vs_{suffix}.png")
+            fig.savefig(out_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            print(f"Saved: {out_path}")
 
     # LWP/WVP ratio
     df_ratio = df_pd[df_pd["WVP"] > 0].copy()
@@ -243,24 +258,38 @@ def plot_hexbin(df: pl.DataFrame) -> None:
         ("MCAO", "LWP", "LWP $(g/m^2)$"),
     ]
 
-    for xcol, ycol, ylabel in pairs:
-        x = df_pd[xcol].values
-        y = df_pd[ycol].values
-        mask = np.isfinite(x) & np.isfinite(y)
-        x, y = x[mask], y[mask]
+    for log_scale in [False, True]:
+        for xcol, ycol, ylabel in pairs:
+            x = df_pd[xcol].values
+            y = df_pd[ycol].values
+            mask = np.isfinite(x) & np.isfinite(y)
+            if log_scale:
+                mask &= y > 0
+            x, y = x[mask], y[mask]
+            if log_scale:
+                y = np.log(y)
 
-        fig, ax = plt.subplots(figsize=(8, 6))
-        hb = ax.hexbin(x, y, gridsize=30, cmap="YlOrRd", mincnt=1)
-        fig.colorbar(hb, ax=ax, label="Count")
-        ax.set_xlabel("MCAO $(K)$")
-        ax.set_ylabel(ylabel)
-        ax.set_title(f"{ycol} vs MCAO (low-level legs)")
-        ax.grid(True, alpha=0.3)
+            if log_scale:
+                y_label = f"ln({ycol})"
+                title = f"ln({ycol}) vs MCAO (low-level legs)"
+                suffix = f"ln{ycol.lower()}"
+            else:
+                y_label = ylabel
+                title = f"{ycol} vs MCAO (low-level legs)"
+                suffix = ycol.lower()
 
-        out_path = os.path.join(PLOTS_DIR, f"hexbin_mcao_vs_{ycol.lower()}.png")
-        fig.savefig(out_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        print(f"Saved: {out_path}")
+            fig, ax = plt.subplots(figsize=(8, 6))
+            hb = ax.hexbin(x, y, gridsize=30, cmap="YlOrRd", mincnt=1)
+            fig.colorbar(hb, ax=ax, label="Count")
+            ax.set_xlabel("MCAO $(K)$")
+            ax.set_ylabel(y_label)
+            ax.set_title(title)
+            ax.grid(True, alpha=0.3)
+
+            out_path = os.path.join(PLOTS_DIR, f"hexbin_mcao_vs_{suffix}.png")
+            fig.savefig(out_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            print(f"Saved: {out_path}")
 
 
 def plot_binned_stats(df: pl.DataFrame) -> None:
@@ -282,45 +311,64 @@ def plot_binned_stats(df: pl.DataFrame) -> None:
     bin_idx = np.digitize(mcao_vals, bin_edges) - 1
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-    for ycol, ylabel in [("WVP", "WVP $(g/m^2)$"), ("LWP", "LWP $(g/m^2)$")]:
-        y_vals = df_valid[ycol].to_numpy()
+    for log_scale in [False, True]:
+        for ycol, ylabel in [("WVP", "WVP $(g/m^2)$"), ("LWP", "LWP $(g/m^2)$")]:
+            y_vals = df_valid[ycol].to_numpy()
 
-        means = []
-        stds = []
-        valid_centers = []
+            means = []
+            stds = []
+            valid_centers = []
 
-        for i in range(len(bin_centers)):
-            mask = bin_idx == i
-            if mask.sum() >= 2:
-                means.append(np.nanmean(y_vals[mask]))
-                stds.append(np.nanstd(y_vals[mask]))
-                valid_centers.append(bin_centers[i])
+            for i in range(len(bin_centers)):
+                mask = bin_idx == i
+                y_bin = y_vals[mask]
+                if log_scale:
+                    # filter for positive values before taking log
+                    y_bin = y_bin[(y_bin > 0) & np.isfinite(y_bin)]
+                    if len(y_bin) >= 2:
+                        y_bin = np.log(y_bin)
+                        means.append(np.mean(y_bin))
+                        stds.append(np.std(y_bin))
+                        valid_centers.append(bin_centers[i])
+                else:
+                    if mask.sum() >= 2:
+                        means.append(np.nanmean(y_bin))
+                        stds.append(np.nanstd(y_bin))
+                        valid_centers.append(bin_centers[i])
 
-        if not valid_centers:
-            continue
+            if not valid_centers:
+                continue
 
-        centers = np.array(valid_centers)
-        means = np.array(means)
-        stds = np.array(stds)
+            centers = np.array(valid_centers)
+            means = np.array(means)
+            stds = np.array(stds)
 
-        fig, ax = plt.subplots(figsize=(8, 6))
-        ax.plot(centers, means, "o-", color="tab:blue", linewidth=2, markersize=6)
-        ax.fill_between(
-            centers,
-            means - stds,
-            means + stds,
-            alpha=0.2,
-            color="tab:blue",
-        )
-        ax.set_xlabel("MCAO $(K)$")
-        ax.set_ylabel(ylabel)
-        ax.set_title(f"{ycol} vs MCAO (mean $\\pm$ std)")
-        ax.grid(True, alpha=0.3)
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax.plot(centers, means, "o-", color="tab:blue", linewidth=2, markersize=6)
+            ax.fill_between(
+                centers,
+                means - stds,
+                means + stds,
+                alpha=0.2,
+                color="tab:blue",
+            )
+            ax.set_xlabel("MCAO $(K)$")
 
-        out_path = os.path.join(PLOTS_DIR, f"binned_mcao_vs_{ycol.lower()}.png")
-        fig.savefig(out_path, dpi=200, bbox_inches="tight")
-        plt.close(fig)
-        print(f"Saved: {out_path}")
+            if log_scale:
+                ax.set_ylabel(f"ln({ycol}) $(ln(g/m^2))$")
+                ax.set_title(f"ln({ycol}) vs MCAO (mean $\\pm$ std)")
+                suffix = f"ln{ycol.lower()}"
+            else:
+                ax.set_ylabel(ylabel)
+                ax.set_title(f"{ycol} vs MCAO (mean $\\pm$ std)")
+                suffix = ycol.lower()
+
+            ax.grid(True, alpha=0.3)
+
+            out_path = os.path.join(PLOTS_DIR, f"binned_mcao_vs_{suffix}.png")
+            fig.savefig(out_path, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            print(f"Saved: {out_path}")
 
 
 def load_full_flight_altitude(flight: str) -> pl.DataFrame:
