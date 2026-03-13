@@ -4,7 +4,8 @@ import os
 
 import pytest
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from nc.loader import PROJECT_ROOT
+
 GOLDEN_DIR = os.path.join(PROJECT_ROOT, "output")
 
 

@@ -10,7 +10,7 @@ from ds_638_021.mcao import build_merged_dataset
 from nc.loader import PROJECT_ROOT, open_dataset
 from nc.vars import DS_638_001 as v001, DS_638_021 as v
 
-PLOTS_DIR_MCAO = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/mcao")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/mcao")
 
 
 def plot_scatter(df: pl.DataFrame) -> None:
@@ -55,7 +55,7 @@ def plot_scatter(df: pl.DataFrame) -> None:
             ax.legend(title="Flight", fontsize=7, loc="best")
             ax.grid(True, alpha=0.3)
 
-            out_path = os.path.join(PLOTS_DIR_MCAO, f"scatter_mcao_vs_{suffix}.png")
+            out_path = os.path.join(PLOTS_DIR, f"scatter_mcao_vs_{suffix}.png")
             fig.savefig(out_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             print(f"Saved: {out_path}")
@@ -97,7 +97,7 @@ def plot_scatter(df: pl.DataFrame) -> None:
         ax.legend(title="Flight", fontsize=7, loc="best")
         ax.grid(True, alpha=0.3)
 
-        out_path = os.path.join(PLOTS_DIR_MCAO, f"scatter_mcao_vs_{suffix}.png")
+        out_path = os.path.join(PLOTS_DIR, f"scatter_mcao_vs_{suffix}.png")
         fig.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
@@ -141,7 +141,7 @@ def plot_hexbin(df: pl.DataFrame) -> None:
             ax.set_title(title)
             ax.grid(True, alpha=0.3)
 
-            out_path = os.path.join(PLOTS_DIR_MCAO, f"hexbin_mcao_vs_{suffix}.png")
+            out_path = os.path.join(PLOTS_DIR, f"hexbin_mcao_vs_{suffix}.png")
             fig.savefig(out_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             print(f"Saved: {out_path}")
@@ -217,7 +217,7 @@ def plot_binned_stats(df: pl.DataFrame) -> None:
 
             ax.grid(True, alpha=0.3)
 
-            out_path = os.path.join(PLOTS_DIR_MCAO, f"binned_mcao_vs_{suffix}.png")
+            out_path = os.path.join(PLOTS_DIR, f"binned_mcao_vs_{suffix}.png")
             fig.savefig(out_path, dpi=200, bbox_inches="tight")
             plt.close(fig)
             print(f"Saved: {out_path}")
@@ -283,14 +283,14 @@ def plot_timeseries(df: pl.DataFrame) -> None:
         ax1.set_title(f"{flight}: MCAO and Altitude (low-level legs)")
         ax1.grid(True, alpha=0.3)
 
-        out_path = os.path.join(PLOTS_DIR_MCAO, f"timeseries_{flight.lower()}.png")
+        out_path = os.path.join(PLOTS_DIR, f"timeseries_{flight.lower()}.png")
         fig.savefig(out_path, dpi=200, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved: {out_path}")
 
 
 def main():
-    os.makedirs(PLOTS_DIR_MCAO, exist_ok=True)
+    os.makedirs(PLOTS_DIR, exist_ok=True)
 
     df = build_merged_dataset()
     df_valid = df.filter(pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan())

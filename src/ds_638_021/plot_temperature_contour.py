@@ -10,9 +10,7 @@ from nc.flights import MARLI_FILES
 from nc.loader import PROJECT_ROOT
 from nc.vars import DS_638_021 as v
 
-PLOTS_DIR_TC = os.path.join(
-    PROJECT_ROOT, f"output/{v.dataset}/plots/temperature_contour"
-)
+PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/temperature_contour")
 
 
 def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) -> str:
@@ -61,8 +59,8 @@ def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) 
     ax.set_ylabel("Height (km)")
     ax.set_title(f"{flight}: MARLi Atmospheric Temperature (°C)")
 
-    os.makedirs(PLOTS_DIR_TC, exist_ok=True)
-    out_path = os.path.join(PLOTS_DIR_TC, f"{flight.lower()}_temperature_contour.png")
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+    out_path = os.path.join(PLOTS_DIR, f"{flight.lower()}_temperature_contour.png")
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return out_path
