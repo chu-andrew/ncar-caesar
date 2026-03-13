@@ -12,11 +12,10 @@ import numpy as np
 import polars as pl
 import seaborn as sns
 
-from nc.flights import FLIGHTS
+from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
 
 from ds_638_021.potential_temperature import compute_theta_850
-from ds_638_038.water_path import LOW_LEVEL_LEGS
 from ds_638_038.load import load_gvr_segment
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/638-021/plots/mcao")

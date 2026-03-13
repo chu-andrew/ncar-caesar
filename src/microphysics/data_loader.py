@@ -7,9 +7,8 @@ import xarray as xr
 
 from ds_638_038.load import load_gvr_segment
 from ds_638_038.segments import load_flight_segments
-from ds_638_038.water_path import LOW_LEVEL_LEGS
-from nc.flights import FLIGHTS
-from nc.loader import PROJECT_ROOT, DATASET_VARS, open_dataset
+from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
+from nc.loader import PROJECT_ROOT, DATASET_VARS
 
 # cloud-phase flags
 PHASE_CLEAR = 0

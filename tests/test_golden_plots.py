@@ -15,11 +15,15 @@ from PIL import Image
 from conftest import GOLDEN_DIR
 
 PLOT_SCRIPTS = [
-    ("ds_638_001.summary", "638-001/plots/summary"),
-    ("ds_638_021.plots", "638-021/plots/potential_temperature"),
-    ("ds_638_021.temperature_contour", "638-021/plots/temperature_contour"),
-    ("ds_638_038.segments", "638-038/plots/segments"),
-    ("ds_638_038.water_path", "638-038/plots/water_path"),
+    ("ds_638_001.summary", "638-001/plots/summary", "PLOTS_DIR"),
+    ("ds_638_021.plots", "638-021/plots/potential_temperature", "PLOTS_DIR"),
+    (
+        "ds_638_021.temperature_contour",
+        "638-021/plots/temperature_contour",
+        "PLOTS_DIR",
+    ),
+    ("ds_638_038.plots", "638-038/plots/segments", "SEGMENTS_PLOTS_DIR"),
+    ("ds_638_038.plots", "638-038/plots/water_path", "WATER_PATH_PLOTS_DIR"),
 ]
 
 
@@ -59,11 +63,13 @@ def _collect_pngs(directory: str) -> list[str]:
 
 
 @pytest.mark.parametrize(
-    "module_name, golden_subdir",
+    "module_name, golden_subdir, plots_dir_attr",
     PLOT_SCRIPTS,
-    ids=[name for name, _ in PLOT_SCRIPTS],
+    ids=[f"{name}:{subdir}" for name, subdir, _ in PLOT_SCRIPTS],
 )
-def test_plots_match_golden(module_name, golden_subdir, tmp_output, monkeypatch):
+def test_plots_match_golden(
+    module_name, golden_subdir, plots_dir_attr, tmp_output, monkeypatch
+):
     print("\n" + module_name)
     golden_dir = os.path.join(GOLDEN_DIR, golden_subdir)
     golden_pngs = _collect_pngs(golden_dir)
@@ -72,7 +78,7 @@ def test_plots_match_golden(module_name, golden_subdir, tmp_output, monkeypatch)
 
     tmp_plots = os.path.join(tmp_output, golden_subdir)
     module = importlib.import_module(module_name)
-    monkeypatch.setattr(module, "PLOTS_DIR", tmp_plots)
+    monkeypatch.setattr(module, plots_dir_attr, tmp_plots)
     module.main()
 
     actual_pngs = _collect_pngs(tmp_plots)

@@ -4,21 +4,23 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
 from nc.flights import FLIGHTS
-from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
+from nc.loader import PROJECT_ROOT, open_dataset
 
 DATASET = "638-038"
+TIME = "time"
+ALTITUDE = "alt"
+LWP = "LWP"
+WVP = "WVP"
+
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/gvr_summary")
-_vars = DATASET_VARS[DATASET]
-TIME = _vars["time"]
-ALTITUDE = _vars["altitude"]
 
 
-def plot_gvr_summary(flight: str) -> str:
+def plot_gvr_summary(flight: str):
     with open_dataset(DATASET, flight) as ds:
         times = ds[TIME].values
         alt = ds[ALTITUDE].values / 1000.0  # m -> km
-        lwp = ds["LWP"].values
-        wvp = ds["WVP"].values
+        lwp = ds[LWP].values
+        wvp = ds[WVP].values
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
 
@@ -38,13 +40,13 @@ def plot_gvr_summary(flight: str) -> str:
     out_path = os.path.join(PLOTS_DIR, f"{flight.lower()}_gvr_summary.png")
     fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    return out_path
+
+    print(f"Saved: {out_path}")
 
 
 def main():
     for flight in FLIGHTS:
-        path = plot_gvr_summary(flight)
-        print(f"{flight} -> {path}")
+        plot_gvr_summary(flight)
 
 
 if __name__ == "__main__":
