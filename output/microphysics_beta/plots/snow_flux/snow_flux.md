@@ -1,5 +1,7 @@
 # Snow Flux
 
+Note: All plots here are limited to low-level legs.
+
 ## Snow Flux vs MCAO Index
 
 | Scatter | Binned |

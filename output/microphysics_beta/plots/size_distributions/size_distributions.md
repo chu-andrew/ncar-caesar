@@ -15,6 +15,17 @@ Note: All plots here are limited to low-level legs.
 
 ## Integrated Properties vs Water Path
 
+**$M_k$** — $k$-th moment of the size distribution:
+
+$$M_k = \sum_i D_i^k \cdot \frac{dN}{dD}\bigg|_i \cdot \Delta D_i$$
+
+- $M_0$ (#/$\text{m}^3$): total number concentration
+- $M_3$ ($\mu \text{m}^3/\text{m}^3$): volume-weighted moment
+
+**$D_{\text{eff}}$** — effective diameter:
+
+$$D_{\text{eff}} = \frac{M_3}{M_2} \quad (\mu\text{m})$$
+
 | WVP | LWP |
 |-----|-----|
 | ![](integrated_properties_vs_WVP.png) | ![](integrated_properties_vs_LWP.png) |
