@@ -9,6 +9,7 @@ from ds_638_038.load import load_gvr_segment
 from ds_638_038.segments import load_flight_segments
 from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
 from nc.loader import PROJECT_ROOT, DATASET_VARS
+from nc.time import seconds_to_datetime64
 
 # cloud-phase flags
 PHASE_CLEAR = 0
@@ -17,7 +18,9 @@ PHASE_MIXED = 2
 PHASE_LIQUID = 3
 PHASE_DRIZZLE = 4
 
-MICRO_DATASET_DIR = os.path.join(PROJECT_ROOT, "data", "microphysics_beta", "data")
+MICROPHYSICS_DATASET_DIR = os.path.join(
+    PROJECT_ROOT, "data", "microphysics_beta", "data"
+)
 
 # GVR dataset variable names
 _vars_038 = DATASET_VARS["638-038"]
@@ -26,17 +29,10 @@ ALT_038 = _vars_038["altitude"]
 
 
 def _open_micro(flight: str) -> xr.Dataset:
-    path = os.path.join(MICRO_DATASET_DIR, f"{flight}_microphysics_beta.nc")
+    path = os.path.join(MICROPHYSICS_DATASET_DIR, f"{flight}_microphysics_beta.nc")
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Microphysics file not found: {path}")
     return xr.open_dataset(path)
-
-
-def _seconds_to_datetime64(seconds: np.ndarray, flight_date: str) -> np.ndarray:
-    """Convert seconds-from-midnight to datetime64[ns] given a date string."""
-    base = np.datetime64(flight_date, "ns")
-    ns_per_sec = np.int64(1_000_000_000)
-    return base + (seconds * ns_per_sec).astype("timedelta64[ns]")
 
 
 def load_microphysics_segment(
@@ -92,7 +88,7 @@ def load_microphysics_segment(
     bin_centers_um = (bin_edges_um[:-1] + bin_edges_um[1:]) / 2
     bin_widths_um = np.diff(bin_edges_um)
 
-    times_dt = _seconds_to_datetime64(t_sel, flight_date)
+    times_dt = seconds_to_datetime64(t_sel, flight_date)
 
     return times_dt, c_sel, bin_centers_um, bin_widths_um
 
