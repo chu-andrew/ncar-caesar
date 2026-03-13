@@ -2,11 +2,10 @@ import numpy as np
 import polars as pl
 
 from nc.loader import open_dataset
+from nc.vars import DS_638_038 as v
 from ds_638_038.segments import load_flight_segments
 
 DATASET = "638-038"
-TIME = "time"
-ALTITUDE = "alt"
 
 
 def load_gvr_segment(flight: str, start_pt: int, end_pt: int) -> pl.DataFrame:
@@ -14,10 +13,10 @@ def load_gvr_segment(flight: str, start_pt: int, end_pt: int) -> pl.DataFrame:
     s = fs.segment_slice(start_pt, end_pt)
 
     with open_dataset(DATASET, flight) as ds:
-        times = ds[TIME].values[s]
-        lwp = ds["LWP"].values[s]
-        wvp = ds["WVP"].values[s]
-        alt = ds[ALTITUDE].values[s]
+        times = ds[v.time].values[s]
+        lwp = ds[v.lwp].values[s]
+        wvp = ds[v.wvp].values[s]
+        alt = ds[v.altitude].values[s]
 
     return pl.DataFrame(
         {

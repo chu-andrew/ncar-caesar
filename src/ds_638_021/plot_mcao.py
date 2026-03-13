@@ -7,7 +7,8 @@ import polars as pl
 import seaborn as sns
 
 from ds_638_021.mcao import build_merged_dataset
-from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
+from nc.loader import PROJECT_ROOT, open_dataset
+from nc.vars import DS_638_001 as v001
 
 DATASET = "638-021"
 PLOTS_DIR_MCAO = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/mcao")
@@ -224,10 +225,9 @@ def plot_binned_stats(df: pl.DataFrame) -> None:
 
 
 def load_full_flight_altitude(flight: str) -> pl.DataFrame:
-    _vars_001 = DATASET_VARS["638-001"]
     with open_dataset("638-001", flight) as ds:
-        times = ds[_vars_001["time"]].values
-        alt = ds[_vars_001["altitude"]].values
+        times = ds[v001.time].values
+        alt = ds[v001.altitude].values
 
     return pl.DataFrame(
         {

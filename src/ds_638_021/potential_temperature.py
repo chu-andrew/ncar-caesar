@@ -4,8 +4,8 @@ from metpy.units import units as munits
 
 from nc.flights import MARLI_FILES
 from nc.loader import open_dataset
+from nc.vars import DS_638_021 as v
 
-ALTITUDE = "Alt"
 DATASET = "638-021"
 
 P_850 = 850  # hPa
@@ -181,7 +181,7 @@ def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
     for filename in filenames:
         with open_dataset(DATASET, filename) as ds:
             time, theta, h, p = _extract_theta_850(ds)
-            all_alt.append(ds[ALTITUDE].values)
+            all_alt.append(ds[v.altitude].values)
         all_time.append(time)
         all_theta.append(theta)
         if h_actual is None:

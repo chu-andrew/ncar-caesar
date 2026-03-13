@@ -11,12 +11,12 @@ import polars as pl
 from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
 from nc.loader import open_dataset
 from nc.time import utc_hours_to_datetime64
+from nc.vars import DS_638_001 as v001
 
 from ds_638_021.potential_temperature import compute_theta_850
 from ds_638_038.load import load_gvr_segment
 
 THETA_TOLERANCE = "30s"
-_TIME_001 = "Time"
 
 
 def load_rstb(flight: str) -> pl.DataFrame:
@@ -26,8 +26,8 @@ def load_rstb(flight: str) -> pl.DataFrame:
     RSTB is in degC.
     """
     with open_dataset("638-001", flight) as ds:
-        times = ds[_TIME_001].values
-        rstb = ds["RSTB"].values
+        times = ds[v001.time].values
+        rstb = ds[v001.surface_temp].values
 
     return pl.DataFrame(
         {

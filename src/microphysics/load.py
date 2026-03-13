@@ -8,8 +8,9 @@ import xarray as xr
 from ds_638_038.load import load_gvr_segment
 from ds_638_038.segments import load_flight_segments
 from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
-from nc.loader import PROJECT_ROOT, DATASET_VARS
+from nc.loader import PROJECT_ROOT
 from nc.time import seconds_to_datetime64
+from nc.vars import MICROPHYSICS as vm
 
 # cloud-phase flags
 PHASE_CLEAR = 0
@@ -21,11 +22,6 @@ PHASE_DRIZZLE = 4
 MICROPHYSICS_DATASET_DIR = os.path.join(
     PROJECT_ROOT, "data", "microphysics_beta", "data"
 )
-
-# GVR dataset variable names
-_vars_038 = DATASET_VARS["638-038"]
-TIME_038 = _vars_038["time"]
-ALT_038 = _vars_038["altitude"]
 
 
 def _open_micro(flight: str) -> xr.Dataset:
@@ -60,10 +56,10 @@ def load_microphysics_segment(
     # load microphysics
     ds = _open_micro(flight)
     try:
-        micro_time = ds["time"].values  # seconds from midnight
-        cloud_phase = ds["cloud_phase"].values  # (time,)
-        conc = ds["concentration"].values  # (bin_centers, time), #/m^4
-        bin_edges_um = ds["bin_edges"].values  # um, (170,)
+        micro_time = ds[vm.time].values  # seconds from midnight
+        cloud_phase = ds[vm.cloud_phase].values  # (time,)
+        conc = ds[vm.concentration].values  # (bin_centers, time), #/m^4
+        bin_edges_um = ds[vm.bin_edges].values  # um, (170,)
     finally:
         ds.close()
 

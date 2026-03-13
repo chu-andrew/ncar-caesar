@@ -5,6 +5,7 @@ import numpy as np
 
 from nc.flights import FLIGHTS
 from nc.loader import DATA_DIR
+from nc.vars import DS_638_052 as v
 
 DATASET = "638-052"
 
@@ -29,8 +30,8 @@ def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
     for f in files:
         ds = xr.open_dataset(f)
         try:
-            t = ds["time"].values  # datetime64[ns]
-            cb = ds["cloudbase_WCL"].values  # meters, float32
+            t = ds[v.time].values  # datetime64[ns]
+            cb = ds[v.cloud_base].values  # meters, float32
         finally:
             ds.close()
 

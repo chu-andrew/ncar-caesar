@@ -5,22 +5,19 @@ import matplotlib.pyplot as plt
 
 from nc.flights import FLIGHTS
 from nc.loader import PROJECT_ROOT, open_dataset
+from nc.vars import DS_638_038 as v
 
 DATASET = "638-038"
-TIME = "time"
-ALTITUDE = "alt"
-LWP = "LWP"
-WVP = "WVP"
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/gvr_summary")
 
 
 def plot_gvr_summary(flight: str):
     with open_dataset(DATASET, flight) as ds:
-        times = ds[TIME].values
-        alt = ds[ALTITUDE].values / 1000.0  # m -> km
-        lwp = ds[LWP].values
-        wvp = ds[WVP].values
+        times = ds[v.time].values
+        alt = ds[v.altitude].values / 1000.0  # m -> km
+        lwp = ds[v.lwp].values
+        wvp = ds[v.wvp].values
 
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
 

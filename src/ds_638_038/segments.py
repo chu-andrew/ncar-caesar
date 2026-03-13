@@ -4,10 +4,9 @@ import numpy as np
 
 from nc.loader import open_dataset
 from nc.segmentation import find_inflection_points
+from nc.vars import DS_638_038 as v
 
 DATASET = "638-038"
-ALTITUDE = "alt"
-TIME = "time"
 
 # per-flight RDP epsilon values (tuned visually)
 EPSILONS = {
@@ -68,8 +67,8 @@ def load_flight_segments(flight: str, epsilon: float = None) -> FlightSegments:
         epsilon = EPSILONS[flight]
 
     with open_dataset(DATASET, flight) as ds:
-        times = ds[TIME].values
-        altitude = ds[ALTITUDE].values / 1000.0  # m to km
+        times = ds[v.time].values
+        altitude = ds[v.altitude].values / 1000.0  # m to km
 
     mask = find_inflection_points(altitude, epsilon=epsilon)
     inflection_indices = np.where(mask)[0]

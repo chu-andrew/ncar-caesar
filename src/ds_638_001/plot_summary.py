@@ -6,9 +6,10 @@ import matplotlib.pyplot as plt
 import polars as pl
 import seaborn as sns
 
-from ds_638_001.summary import LATITUDE, LONGITUDE, construct_df
+from ds_638_001.summary import construct_df
 from nc.flights import FLIGHTS
 from nc.loader import PROJECT_ROOT, open_dataset
+from nc.vars import DS_638_001 as v001
 
 DATASET = "638-001"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/638-001/plots/summary")
@@ -48,8 +49,8 @@ def setup_map(ax: plt.Axes) -> None:
 def plot_ground_track(df: pl.DataFrame, ax: plt.Axes, label: str) -> None:
     setup_map(ax)
     ax.plot(
-        df[LONGITUDE].to_numpy(),
-        df[LATITUDE].to_numpy(),
+        df[v001.longitude].to_numpy(),
+        df[v001.latitude].to_numpy(),
         transform=ccrs.PlateCarree(),
         linewidth=1.0,
         color="r",
@@ -67,8 +68,8 @@ def main():
         label = f"CAESAR {flight} ({date})"
 
         map_proj = ccrs.LambertConformal(
-            central_longitude=float(df[LONGITUDE].mean()),
-            central_latitude=float(df[LATITUDE].mean()),
+            central_longitude=float(df[v001.longitude].mean()),
+            central_latitude=float(df[v001.latitude].mean()),
         )
 
         fig = plt.figure(figsize=(18, 6))
@@ -97,8 +98,8 @@ def main():
             df = construct_df(ds)
 
         ax.plot(
-            df[LONGITUDE].to_numpy(),
-            df[LATITUDE].to_numpy(),
+            df[v001.longitude].to_numpy(),
+            df[v001.latitude].to_numpy(),
             transform=ccrs.PlateCarree(),
             linewidth=1.25,
             label=f"{flight}",

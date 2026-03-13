@@ -2,12 +2,11 @@ import numpy as np
 
 from nc.flights import MARLI_FILES
 from nc.loader import open_dataset
+from nc.vars import DS_638_021 as v
 
 from ds_638_021.potential_temperature import mask_temperature_outliers
 
 DATASET = "638-021"
-ALTITUDE = "Alt"
-TIME = "time"
 
 
 def load_contour_data(flight: str) -> dict:
@@ -25,8 +24,8 @@ def load_contour_data(flight: str) -> dict:
         with open_dataset(DATASET, filename) as ds:
             h_file = ds["H"].values
             t_data = ds["T"].values.astype(np.float64)
-            all_time.append(ds[TIME].values)
-            all_alt.append(ds[ALTITUDE].values)
+            all_time.append(ds[v.time].values)
+            all_alt.append(ds[v.altitude].values)
 
             if h_file.shape[0] == H.shape[0]:
                 all_T.append(t_data)

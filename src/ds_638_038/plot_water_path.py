@@ -6,13 +6,10 @@ import seaborn as sns
 
 from nc.flights import LOW_LEVEL_LEGS
 from nc.loader import PROJECT_ROOT, open_dataset
+from nc.vars import DS_638_038 as v
 from ds_638_038.segments import load_flight_segments
 
 DATASET = "638-038"
-TIME = "time"
-ALTITUDE = "alt"
-LWP = "LWP"
-WVP = "WVP"
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/water_path")
 
@@ -22,10 +19,10 @@ def plot_water_path(flight: str, start_pt: int, end_pt: int):
     fs = load_flight_segments(flight)
 
     with open_dataset(DATASET, flight) as ds:
-        times = ds[TIME].values
-        lwp = ds[LWP].values
-        wvp = ds[WVP].values
-        alt = ds[ALTITUDE].values
+        times = ds[v.time].values
+        lwp = ds[v.lwp].values
+        wvp = ds[v.wvp].values
+        alt = ds[v.altitude].values
 
     s = fs.segment_slice(start_pt, end_pt)
     times, lwp, wvp, alt = times[s], lwp[s], wvp[s], alt[s]
