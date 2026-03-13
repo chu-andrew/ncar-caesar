@@ -53,35 +53,9 @@ def get_file_path(dataset_id: str, filename: str) -> str:
     raise FileNotFoundError(f"No NetCDF file matching '{filename}' in {data_dir}")
 
 
-DATASET_VARS = {
-    "638-001": {
-        "time": "Time",
-        "altitude": "GGALT",
-        "latitude": "LATC",
-        "longitude": "LONC",
-    },
-    "638-021": {
-        "time": "time",
-        "altitude": "Alt",
-    },
-    "638-038": {
-        "time": "time",
-        "altitude": "alt",
-    },
-}
-
-
-def load_dataset(dataset_id: str, filename: str) -> xr.Dataset:
-    """Open a dataset's NetCDF file and return an xarray Dataset."""
-    path = get_file_path(dataset_id, filename)
-    return xr.open_dataset(path, decode_cf=True, decode_timedelta=True)
-
-
 @contextmanager
 def open_dataset(dataset_id: str, filename: str):
     """Context manager that opens a NetCDF dataset and ensures it is closed."""
-    ds = load_dataset(dataset_id, filename)
-    try:
+    path = get_file_path(dataset_id, filename)
+    with xr.open_dataset(path, decode_cf=True, decode_timedelta=True) as ds:
         yield ds
-    finally:
-        ds.close()
