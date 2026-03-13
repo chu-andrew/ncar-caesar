@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class _Ds638001Vars:
+    dataset: str = "638-001"
     time: str = "Time"
     latitude: str = "LATC"
     longitude: str = "LONC"
@@ -12,6 +13,7 @@ class _Ds638001Vars:
 
 @dataclass(frozen=True)
 class _Ds638021Vars:
+    dataset: str = "638-021"
     time: str = "time"
     altitude: str = "Alt"
     bin_heights: str = "H"
@@ -20,6 +22,7 @@ class _Ds638021Vars:
 
 @dataclass(frozen=True)
 class _Ds638038Vars:
+    dataset: str = "638-038"
     time: str = "time"
     altitude: str = "alt"
     lwp: str = "LWP"
@@ -28,6 +31,7 @@ class _Ds638038Vars:
 
 @dataclass(frozen=True)
 class _Ds638052Vars:
+    dataset: str = "638-052"
     time: str = "time"
     cloud_base: str = "cloudbase_WCL"
 

@@ -11,8 +11,7 @@ from nc.flights import FLIGHTS
 from nc.loader import PROJECT_ROOT, open_dataset
 from nc.vars import DS_638_001 as v001
 
-DATASET = "638-001"
-PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/638-001/plots/summary")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v001.dataset}/plots/summary")
 
 # configured by feel (reference: https://data.eol.ucar.edu/project/CAESAR)
 MIN_LAT = -15
@@ -62,7 +61,7 @@ def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
     for flight, date in FLIGHTS.items():
-        with open_dataset(DATASET, flight) as ds:
+        with open_dataset(v001.dataset, flight) as ds:
             df = construct_df(ds)
 
         label = f"CAESAR {flight} ({date})"
@@ -94,7 +93,7 @@ def main():
     setup_map(ax)
 
     for flight, date in FLIGHTS.items():
-        with open_dataset(DATASET, flight) as ds:
+        with open_dataset(v001.dataset, flight) as ds:
             df = construct_df(ds)
 
         ax.plot(

@@ -6,8 +6,6 @@ from nc.flights import MARLI_FILES
 from nc.loader import open_dataset
 from nc.vars import DS_638_021 as v
 
-DATASET = "638-021"
-
 P_850 = 850  # hPa
 
 MAD_K = 5.0  # multiplier for MAD
@@ -179,7 +177,7 @@ def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
     p_actual = None
 
     for filename in filenames:
-        with open_dataset(DATASET, filename) as ds:
+        with open_dataset(v.dataset, filename) as ds:
             time, theta, h, p = _extract_theta_850(ds)
             all_alt.append(ds[v.altitude].values)
         all_time.append(time)

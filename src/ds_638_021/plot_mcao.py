@@ -8,10 +8,9 @@ import seaborn as sns
 
 from ds_638_021.mcao import build_merged_dataset
 from nc.loader import PROJECT_ROOT, open_dataset
-from nc.vars import DS_638_001 as v001
+from nc.vars import DS_638_001 as v001, DS_638_021 as v
 
-DATASET = "638-021"
-PLOTS_DIR_MCAO = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/mcao")
+PLOTS_DIR_MCAO = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/mcao")
 
 
 def plot_scatter(df: pl.DataFrame) -> None:

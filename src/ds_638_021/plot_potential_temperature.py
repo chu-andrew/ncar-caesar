@@ -6,9 +6,11 @@ import numpy as np
 from ds_638_021.potential_temperature import compute_theta_850
 from nc.flights import MARLI_FILES
 from nc.loader import PROJECT_ROOT
+from nc.vars import DS_638_021 as v
 
-DATASET = "638-021"
-PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/potential_temperature")
+PLOTS_DIR = os.path.join(
+    PROJECT_ROOT, f"output/{v.dataset}/plots/potential_temperature"
+)
 
 
 def plot_theta_850(

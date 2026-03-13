@@ -7,8 +7,6 @@ from nc.flights import FLIGHTS
 from nc.loader import DATA_DIR
 from nc.vars import DS_638_052 as v
 
-DATASET = "638-052"
-
 
 def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -17,7 +15,7 @@ def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
     import xarray as xr
 
     date_str = FLIGHTS[flight].replace("-", "")
-    path = os.path.join(DATA_DIR, DATASET, "data")
+    path = os.path.join(DATA_DIR, v.dataset, "data")
     pattern = os.path.join(path, f"RSmerged.{date_str}_*_L3_CAESAR.nc")
     files = sorted(glob.glob(pattern))
 

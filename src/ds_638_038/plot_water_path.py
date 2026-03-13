@@ -9,16 +9,14 @@ from nc.loader import PROJECT_ROOT, open_dataset
 from nc.vars import DS_638_038 as v
 from ds_638_038.segments import load_flight_segments
 
-DATASET = "638-038"
-
-PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/water_path")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/water_path")
 
 
 def plot_water_path(flight: str, start_pt: int, end_pt: int):
     os.makedirs(PLOTS_DIR, exist_ok=True)
     fs = load_flight_segments(flight)
 
-    with open_dataset(DATASET, flight) as ds:
+    with open_dataset(v.dataset, flight) as ds:
         times = ds[v.time].values
         lwp = ds[v.lwp].values
         wvp = ds[v.wvp].values

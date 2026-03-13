@@ -7,13 +7,11 @@ from nc.flights import FLIGHTS
 from nc.loader import PROJECT_ROOT, open_dataset
 from nc.vars import DS_638_038 as v
 
-DATASET = "638-038"
-
-PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/gvr_summary")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/gvr_summary")
 
 
 def plot_gvr_summary(flight: str):
-    with open_dataset(DATASET, flight) as ds:
+    with open_dataset(v.dataset, flight) as ds:
         times = ds[v.time].values
         alt = ds[v.altitude].values / 1000.0  # m -> km
         lwp = ds[v.lwp].values

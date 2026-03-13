@@ -4,10 +4,10 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
 from nc.loader import PROJECT_ROOT
+from nc.vars import DS_638_038 as v
 from ds_638_038.segments import load_flight_segments, FlightSegments, EPSILONS
 
-DATASET = "638-038"
-PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/segments")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/segments")
 
 
 def plot_flight_segments(fs: FlightSegments):

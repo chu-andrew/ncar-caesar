@@ -6,14 +6,12 @@ from nc.vars import DS_638_021 as v
 
 from ds_638_021.potential_temperature import mask_temperature_outliers
 
-DATASET = "638-021"
-
 
 def load_contour_data(flight: str) -> dict:
     filenames = MARLI_FILES[flight]
 
     # use the first file's height grid as reference
-    with open_dataset(DATASET, filenames[0]) as ds:
+    with open_dataset(v.dataset, filenames[0]) as ds:
         H = ds["H"].values
 
     all_time = []
@@ -21,7 +19,7 @@ def load_contour_data(flight: str) -> dict:
     all_alt = []
 
     for filename in filenames:
-        with open_dataset(DATASET, filename) as ds:
+        with open_dataset(v.dataset, filename) as ds:
             h_file = ds["H"].values
             t_data = ds["T"].values.astype(np.float64)
             all_time.append(ds[v.time].values)

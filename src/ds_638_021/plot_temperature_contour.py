@@ -8,9 +8,11 @@ from ds_638_021.temperature_contour import load_contour_data
 from ds_638_052.cloud_base import load_cloud_base
 from nc.flights import MARLI_FILES
 from nc.loader import PROJECT_ROOT
+from nc.vars import DS_638_021 as v
 
-DATASET = "638-021"
-PLOTS_DIR_TC = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/temperature_contour")
+PLOTS_DIR_TC = os.path.join(
+    PROJECT_ROOT, f"output/{v.dataset}/plots/temperature_contour"
+)
 
 
 def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) -> str:
