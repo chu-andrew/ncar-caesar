@@ -19,7 +19,7 @@ Note: All plots here are limited to low-level legs.
 
 $$M_k = \sum_i D_i^k \cdot \frac{dN}{dD}\bigg|_i \cdot \Delta D_i$$
 
-- $M_0$ (#/$\text{m}^3$): total number concentration
+- $M_0$ (# / $\text{m}^3$): total number concentration
 - $M_3$ ($\mu \text{m}^3/\text{m}^3$): volume-weighted moment
 
 **$D_{\text{eff}}$** — effective diameter:
