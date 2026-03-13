@@ -5,6 +5,7 @@ import numpy as np
 
 from nc.flights import MARLI_FILES
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
+from ds_638_052.cloud_base import load_cloud_base
 from ds_638_021.potential_temperature import (
     height_to_pressure,
     mask_temperature_outliers,
@@ -83,6 +84,19 @@ def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) 
     )
 
     ax.plot(time, alt, color="black", linewidth=1.5, label="Aircraft altitude")
+
+    # cloud base height from WCL lidar (638-052)
+    cb_time, cb_height = load_cloud_base(flight)
+    cb_height_km = cb_height / 1000.0  # m -> km
+    valid = ~np.isnan(cb_height_km)
+    ax.scatter(
+        cb_time[valid],
+        cb_height_km[valid],
+        s=1,
+        color="tab:green",
+        alpha=0.4,
+        label="Cloud base (WCL)",
+    )
 
     ax.legend(loc="upper right", fontsize=9)
     ax.set_xlabel("Time (UTC)")

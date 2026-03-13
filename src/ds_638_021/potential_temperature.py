@@ -9,7 +9,6 @@ import numpy as np
 
 from nc.flights import MARLI_FILES
 from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
-from ds_638_052.cloud_base import load_cloud_base
 
 _vars = DATASET_VARS["638-021"]
 ALTITUDE = _vars["altitude"]
@@ -288,19 +287,6 @@ def plot_theta_850(
 
     ax2 = ax.twinx()
     ax2.plot(time_native, alt, color="black", linewidth=1.0, label="Aircraft altitude")
-
-    # cloud base height from WCL lidar (638-052)
-    cb_time, cb_height = load_cloud_base(flight)
-    cb_height_km = cb_height / 1000.0  # m -> km
-    valid = ~np.isnan(cb_height_km)
-    ax2.scatter(
-        cb_time[valid],
-        cb_height_km[valid],
-        s=1,
-        color="tab:red",
-        alpha=0.4,
-        label="Cloud base (WCL)",
-    )
 
     ax2.set_ylabel("Altitude (km)")
     ax2.set_ylim(alt_lim)
