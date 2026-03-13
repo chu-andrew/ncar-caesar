@@ -222,29 +222,36 @@ def plot_scatter(df: pl.DataFrame) -> None:
             print(f"Saved: {out_path}")
 
     # LWP/WVP ratio
-    df_ratio = df_pd[df_pd["WVP"] > 0].copy()
-    df_ratio["LWP_WVP"] = df_ratio["LWP"] / df_ratio["WVP"]
+    # ln requires LWP > 0; linear requires WVP > 0
+    df_ratio_base = df_pd[df_pd["WVP"] > 0].copy()
+    df_ratio_base["LWP_WVP"] = df_ratio_base["LWP"] / df_ratio_base["WVP"]
+    df_ratio_ln = df_ratio_base[df_ratio_base["LWP"] > 0].copy()
+    df_ratio_ln["ln_LWP_WVP"] = np.log(df_ratio_ln["LWP_WVP"])
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.scatterplot(
-        data=df_ratio,
-        x="MCAO",
-        y="LWP_WVP",
-        hue="flight",
-        alpha=0.5,
-        s=15,
-        ax=ax,
-    )
-    ax.set_xlabel("MCAO $(K)$")
-    ax.set_ylabel("LWP / WVP")
-    ax.set_title("LWP/WVP Ratio vs MCAO (low-level legs)")
-    ax.legend(title="Flight", fontsize=7, loc="best")
-    ax.grid(True, alpha=0.3)
+    for df_plot, ycol, ylabel, title, suffix in [
+        (df_ratio_base, "LWP_WVP", "LWP / WVP", "LWP/WVP Ratio vs MCAO (low-level legs)", "lwp_wvp"),
+        (df_ratio_ln, "ln_LWP_WVP", "ln(LWP / WVP)", "ln(LWP/WVP) vs MCAO (low-level legs)", "ln_lwp_wvp"),
+    ]:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.scatterplot(
+            data=df_plot,
+            x="MCAO",
+            y=ycol,
+            hue="flight",
+            alpha=0.5,
+            s=15,
+            ax=ax,
+        )
+        ax.set_xlabel("MCAO $(K)$")
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend(title="Flight", fontsize=7, loc="best")
+        ax.grid(True, alpha=0.3)
 
-    out_path = os.path.join(PLOTS_DIR, "scatter_mcao_vs_lwp_wvp.png")
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    print(f"Saved: {out_path}")
+        out_path = os.path.join(PLOTS_DIR, f"scatter_mcao_vs_{suffix}.png")
+        fig.savefig(out_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Saved: {out_path}")
 
 
 def plot_hexbin(df: pl.DataFrame) -> None:

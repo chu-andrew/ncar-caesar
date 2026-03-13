@@ -23,6 +23,7 @@
 | ln(WVP) | ![](scatter_mcao_vs_lnwvp.png) | ![](hexbin_mcao_vs_lnwvp.png) | ![](binned_mcao_vs_lnwvp.png) |
 | ln(LWP) | ![](scatter_mcao_vs_lnlwp.png) | ![](hexbin_mcao_vs_lnlwp.png) | ![](binned_mcao_vs_lnlwp.png) |
 
-## LWP + WVP Combined
+## LWP/WVP Ratio
 
 ![](scatter_mcao_vs_lwp_wvp.png)
+![](scatter_mcao_vs_ln_lwp_wvp.png)
