@@ -16,7 +16,7 @@ from conftest import GOLDEN_DIR
 
 PLOT_SCRIPTS = [
     ("ds_638_001.summary", "638-001/plots/summary"),
-    ("ds_638_021.potential_temperature", "638-021/plots/potential_temperature"),
+    ("ds_638_021.plots", "638-021/plots/potential_temperature"),
     ("ds_638_021.temperature_contour", "638-021/plots/temperature_contour"),
     ("ds_638_038.segments", "638-038/plots/segments"),
     ("ds_638_038.water_path", "638-038/plots/water_path"),

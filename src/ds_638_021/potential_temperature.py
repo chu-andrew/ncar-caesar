@@ -1,22 +1,13 @@
-"""
-Calculate potential temperature at 850 hPa.
-"""
-
-import os
-
-import matplotlib.pyplot as plt
+import metpy.calc as mpcalc
 import numpy as np
+from metpy.units import units as munits
 
 from nc.flights import MARLI_FILES
-from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
+from nc.loader import open_dataset
 
-_vars = DATASET_VARS["638-021"]
-ALTITUDE = _vars["altitude"]
-
+ALTITUDE = "Alt"
 DATASET = "638-021"
-PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/potential_temperature")
 
-FILL_VALUE = 9999.0
 P_850 = 850  # hPa
 
 MAD_K = 5.0  # multiplier for MAD
@@ -29,7 +20,7 @@ def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
     """
 
     T = T.astype(np.float64, copy=True)
-    T[(T >= FILL_VALUE) | (T < -100) | (T > 100)] = np.nan
+    T[(T >= 9999.0) | (T < -100) | (T > 100)] = np.nan
 
     if T.ndim == 1:
         T = T[:, np.newaxis]
@@ -53,24 +44,15 @@ def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
 
 
 def height_to_pressure(h_km: np.ndarray) -> np.ndarray:
-    """Convert height (km MSL) to pressure (hPa) using the hypsometric equation.
-
-    p = p_surface * exp(-h * g / (R_d * T_mean))
-    """
-    P_SURFACE = 1013.25  # hPa, standard sea-level pressure
-    T_MEAN = 288.15  # K, standard mean temperature (ISA sea-level) = 15 degC
-    R_D = 287.05  # J/(kg K), specific gas constant for dry air
-    G = 9.81  # m/s^2, gravitational acceleration
-
-    h_m = h_km * 1000.0  # km -> m
-    return P_SURFACE * np.exp(-h_m * G / (R_D * T_MEAN))
+    """Convert height (km MSL) to pressure (hPa) using standard atmosphere."""
+    return mpcalc.height_to_pressure_std(h_km * munits.km).to("hPa").magnitude
 
 
 def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
-    KAPPA = 0.286  # R/c_p
-
-    t_kelvin = t_celsius + 273.15
-    return t_kelvin * (1000.0 / p_hpa) ** KAPPA
+    """Potential temperature from temperature (degC) and pressure (hPa)."""
+    T_K = (t_celsius + 273.15) * munits.kelvin
+    P = p_hpa * munits.hPa
+    return mpcalc.potential_temperature(P, T_K).to("kelvin").magnitude
 
 
 def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
@@ -234,105 +216,3 @@ def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
         "is_interpolated": is_interpolated,
         "theta_850_std": interp_std,
     }
-
-
-def plot_theta_850(
-    flight: str,
-    result: dict,
-    theta_lim: tuple,
-    alt_lim: tuple,
-) -> str:
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    out_path = os.path.join(PLOTS_DIR, f"{flight.lower()}_theta850.png")
-
-    time_regrid = result["time_regrid_utc_hours"]
-    theta = result["theta_850"]
-    time_native = result["time_utc_hours"]
-    alt = result["altitude"]
-    is_interpolated = result["is_interpolated"]
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-
-    # plot measured data with solid line
-    measured_mask = ~is_interpolated
-    ax.plot(
-        time_regrid[measured_mask],
-        theta[measured_mask],
-        marker="o",
-        markersize=3,
-        linewidth=1,
-        color="tab:blue",
-        label=f"$\\theta_{850}${' (measured)' if np.any(is_interpolated) else ''}",
-    )
-
-    # plot interpolated data with dashed line
-    if np.any(is_interpolated):
-        ax.plot(
-            time_regrid[is_interpolated],
-            theta[is_interpolated],
-            marker="o",
-            markersize=3,
-            linewidth=0,
-            color="tab:green",
-            alpha=0.6,
-            label="$\\theta_{850}$ (interpolated)",
-        )
-
-    ax.xaxis.set_major_formatter(
-        plt.FuncFormatter(lambda h, _: f"{int(h):02d}:{int((h % 1) * 60):02d}")
-    )
-    ax.set_xlabel("Time (UTC)")
-    ax.set_ylabel("$\\theta_{850}$ (K)")
-    ax.set_ylim(theta_lim)
-
-    ax2 = ax.twinx()
-    ax2.plot(time_native, alt, color="black", linewidth=1.0, label="Aircraft altitude")
-
-    ax2.set_ylabel("Altitude (km)")
-    ax2.set_ylim(alt_lim)
-
-    lines, labels = ax.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax.legend(lines + lines2, labels + labels2, loc="upper right", fontsize=9)
-
-    ax.set_title(
-        f"{flight}: Potential Temperature at ~850 hPa "
-        f"(H={result['h_850']:.3f} km, p={result['p_850']:.1f} hPa)"
-    )
-    ax.grid(True, alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(out_path, dpi=150)
-    plt.close(fig)
-
-    return out_path
-
-
-def main():
-    flights = list(MARLI_FILES.keys())
-
-    # compute all results and find global ranges
-    results = {}
-    for flight in flights:
-        results[flight] = compute_theta_850(flight, interpolate=True)
-
-    all_theta = np.concatenate([r["theta_850"] for r in results.values()])
-    all_alt = np.concatenate([r["altitude"] for r in results.values()])
-    theta_lim = (np.nanmin(all_theta), np.nanmax(all_theta))
-    alt_lim = (np.nanmin(all_alt), np.nanmax(all_alt))
-
-    # plot with fixed ranges
-    for flight in flights:
-        result = results[flight]
-        measured = np.count_nonzero(~result["is_interpolated"])
-        interpolated = np.count_nonzero(result["is_interpolated"])
-        total = len(result["theta_850"])
-        plot = plot_theta_850(flight, result, theta_lim, alt_lim)
-        print(
-            f"{flight}: theta_850 at H={result['h_850']:.4f} km "
-            f"(p={result['p_850']:.1f} hPa), "
-            f"{measured} measured, {interpolated} interpolated ({total} total) -> {plot}"
-        )
-
-
-if __name__ == "__main__":
-    main()
