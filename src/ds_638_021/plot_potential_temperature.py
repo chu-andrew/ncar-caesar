@@ -1,16 +1,11 @@
-"""
-Plots for potential temperature at 850 hPa.
-"""
-
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ds_638_021.potential_temperature import compute_theta_850
 from nc.flights import MARLI_FILES
 from nc.loader import PROJECT_ROOT
-
-from ds_638_021.potential_temperature import compute_theta_850
 
 DATASET = "638-021"
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/potential_temperature")
@@ -33,7 +28,6 @@ def plot_theta_850(
 
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    # plot measured data with solid line
     measured_mask = ~is_interpolated
     ax.plot(
         time_regrid[measured_mask],
@@ -45,7 +39,6 @@ def plot_theta_850(
         label=f"$\\theta_{{850}}${' (measured)' if np.any(is_interpolated) else ''}",
     )
 
-    # plot interpolated data with dashed line
     if np.any(is_interpolated):
         ax.plot(
             time_regrid[is_interpolated],
@@ -90,7 +83,6 @@ def plot_theta_850(
 def main():
     flights = list(MARLI_FILES.keys())
 
-    # compute all results and find global ranges
     results = {}
     for flight in flights:
         results[flight] = compute_theta_850(flight, interpolate=True)
@@ -100,7 +92,6 @@ def main():
     theta_lim = (np.nanmin(all_theta), np.nanmax(all_theta))
     alt_lim = (np.nanmin(all_alt), np.nanmax(all_alt))
 
-    # plot with fixed ranges
     for flight in flights:
         result = results[flight]
         measured = np.count_nonzero(~result["is_interpolated"])
