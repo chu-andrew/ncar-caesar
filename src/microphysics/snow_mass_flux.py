@@ -93,6 +93,20 @@ def build_flux_dataset() -> pl.DataFrame:
 
     df = df.filter(pl.col("MCAO").is_not_null() & ~pl.col("MCAO").is_nan())
 
+    # normalized snow rates (hr^-1)
+    # S is kg/m^2/s, LWP and WVP are g/m^2; convert to kg/m^2/1000
+    # then S/WP = 1/s; multiply by 3600 to get 1/hr
+    # ==> S / WP * 1000 * 3600
+    s_wp_to_per_hr = 3600 * 1000
+    df = df.with_columns(
+        pl.when(pl.col("LWP") > 0)
+        .then(pl.col("S") / pl.col("LWP") * s_wp_to_per_hr)
+        .alias("S_over_LWP"),
+        pl.when(pl.col("WVP") > 0)
+        .then(pl.col("S") / pl.col("WVP") * s_wp_to_per_hr)
+        .alias("S_over_WVP"),
+    )
+
     print(
         f"\nMerged dataset: {df.height} timesteps with valid S and MCAO"
         f"\n\tS range: [{df['S'].min():.3e}, {df['S'].max():.3e}] kg/m^2/s"
@@ -189,6 +203,54 @@ def plot_binned_flux(df: pl.DataFrame) -> None:
     print(f"Saved: {out_path}")
 
 
+def plot_normalized_flux_vs_mcao(df: pl.DataFrame) -> None:
+    """Scatterplot of MCAO vs S/LWP and S/WVP."""
+    df_valid = df.filter(
+        pl.col("S_over_LWP").is_not_null() & pl.col("S_over_WVP").is_not_null()
+    )
+
+    df_pd = df_valid.to_pandas()
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+
+    sns.scatterplot(
+        data=df_pd,
+        x="MCAO",
+        y="S_over_LWP",
+        hue="flight",
+        alpha=0.5,
+        s=20,
+        ax=ax1,
+    )
+    ax1.set_yscale("log")
+    ax1.set_ylabel(r"$S$/LWP (hr$^{-1}$)", fontsize=12)
+    ax1.set_title(r"$S$/LWP vs MCAO (low-level legs)", fontsize=13)
+    ax1.legend(title="Flight", fontsize=8)
+    ax1.grid(True, alpha=0.3)
+
+    sns.scatterplot(
+        data=df_pd,
+        x="MCAO",
+        y="S_over_WVP",
+        hue="flight",
+        alpha=0.5,
+        s=20,
+        ax=ax2,
+    )
+    ax2.set_yscale("log")
+    ax2.set_xlabel("MCAO $(K)$", fontsize=12)
+    ax2.set_ylabel(r"$S$/WVP (hr$^{-1}$)", fontsize=12)
+    ax2.set_title(r"$S$/WVP vs MCAO (low-level legs)", fontsize=13)
+    ax2.legend(title="Flight", fontsize=8)
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    out_path = os.path.join(PLOTS_DIR, "normalized_flux_vs_mcao.png")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved: {out_path}")
+
+
 def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -197,10 +259,11 @@ def main():
     print("Generating plots...")
     plot_flux_vs_mcao(df)
     plot_binned_flux(df)
+    plot_normalized_flux_vs_mcao(df)
 
     # compute global y-limits for S/LWP and S/WVP across all flights
-    s_over_lwp = (df["S"] / df["LWP"]).filter(df["LWP"] > 0).to_numpy()
-    s_over_wvp = (df["S"] / df["WVP"]).filter(df["WVP"] > 0).to_numpy()
+    s_over_lwp = df["S_over_LWP"].drop_nulls().to_numpy()
+    s_over_wvp = df["S_over_WVP"].drop_nulls().to_numpy()
     combined = np.concatenate([s_over_lwp, s_over_wvp])
     combined = combined[combined > 0]
     ylim = (float(combined.min()), float(combined.max()))

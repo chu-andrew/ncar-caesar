@@ -6,6 +6,10 @@
 |---------|--------|
 | ![](snow_flux_vs_mcao.png) | ![](binned_snow_flux_vs_mcao.png) |
 
+## Normalized Snow Rate vs MCAO
+
+![](normalized_flux_vs_mcao.png)
+
 ## Snow Rate Normalized Timeseries by Flight
 
 | Flight | Timeseries |

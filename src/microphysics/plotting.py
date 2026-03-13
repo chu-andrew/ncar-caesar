@@ -161,9 +161,13 @@ def plot_binned_size_distributions(
             conc_array, bin_centers, bin_widths, method="mean"
         )
 
+        # normalize by dividing dN/dD by total N
+        total_N = np.nansum(sd.dNdD * sd.bin_widths_um)
+        dNdD_norm = sd.dNdD / total_N if total_N > 0 else sd.dNdD
+
         ax.plot(
             sd.bin_centers_um,
-            sd.dNdD,
+            dNdD_norm,
             linewidth=2,
             color=color,
             label=f"{bin_label} g/m$^2$",
@@ -175,7 +179,7 @@ def plot_binned_size_distributions(
         ax.set_yscale("log")
 
     ax.set_xlabel(r"Diameter ($\mu$m)", fontsize=12)
-    ax.set_ylabel(r"$\partial N/\partial D$ (#/m$^4$)", fontsize=12)
+    ax.set_ylabel(r"Normalized $\partial N/\partial D$ ($\mu$m$^{-1}$)", fontsize=12)
     ax.set_title(f"Size Distributions Stratified by {variable}", fontsize=14)
     ax.legend(title=f"{variable} bins", fontsize=9)
     ax.grid(True, alpha=0.3)
@@ -256,16 +260,6 @@ def plot_snow_rate_normalized_timeseries(
     if df_flight.is_empty():
         return output_path
 
-    # compute normalized rates via vectorized Polars expressions
-    df_flight = df_flight.with_columns(
-        pl.when(pl.col("LWP") > 0)
-        .then(pl.col("S") / pl.col("LWP"))
-        .alias("S_over_LWP"),
-        pl.when(pl.col("WVP") > 0)
-        .then(pl.col("S") / pl.col("WVP"))
-        .alias("S_over_WVP"),
-    )
-
     # partition once into per-segment dicts; sort time within each segment
     partitions = df_flight.sort("time").partition_by("segment_id", as_dict=True)
     seg_data = {}
@@ -313,9 +307,7 @@ def plot_snow_rate_normalized_timeseries(
     if ylim is not None:
         axes[0].set_ylim(ylim)
 
-    axes[0].set_ylabel(
-        r"Snow rate / water path (kg m$^{-2}$ s$^{-1}$ / g m$^{-2}$)", fontsize=10
-    )
+    axes[0].set_ylabel(r"Snow rate / water path (hr$^{-1}$)", fontsize=10)
     fig.suptitle(f"{flight}: Snow rate normalized by LWP and WVP", fontsize=13)
     plt.tight_layout()
 
@@ -370,50 +362,30 @@ def plot_integrated_properties(
     fig, axes = plt.subplots(3, 1, figsize=(10, 12))
     var_label = r"WVP (g/m$^2$)" if variable == "WVP" else r"LWP (g/m$^2$)"
 
-    sns.scatterplot(
-        data=df_plot,
-        x=variable,
-        y="M0",
-        hue="flight",
-        alpha=0.6,
-        s=20,
-        ax=axes[0],
-    )
-    axes[0].set_xlabel(var_label, fontsize=11)
-    axes[0].set_ylabel(r"$M_0$ (#/m$^3$)", fontsize=11)
-    axes[0].set_title(f"Total Number Concentration vs {variable}", fontsize=12)
-    axes[0].grid(True, alpha=0.3)
-    axes[0].legend(title="Flight", fontsize=8)
-
-    sns.scatterplot(
-        data=df_plot,
-        x=variable,
-        y="D_eff",
-        hue="flight",
-        alpha=0.6,
-        s=20,
-        ax=axes[1],
-    )
-    axes[1].set_xlabel(var_label, fontsize=11)
-    axes[1].set_ylabel(r"$D_{\mathrm{eff}}$ ($\mu$m)", fontsize=11)
-    axes[1].set_title(f"Effective Diameter vs {variable}", fontsize=12)
-    axes[1].grid(True, alpha=0.3)
-    axes[1].legend(title="Flight", fontsize=8)
-
-    sns.scatterplot(
-        data=df_plot,
-        x=variable,
-        y="M3",
-        hue="flight",
-        alpha=0.6,
-        s=20,
-        ax=axes[2],
-    )
-    axes[2].set_xlabel(var_label, fontsize=11)
-    axes[2].set_ylabel(r"$M_3$ ($\mu$m$^3$/m$^3$)", fontsize=11)
-    axes[2].set_title(f"Volume-Weighted Moment vs {variable}", fontsize=12)
-    axes[2].grid(True, alpha=0.3)
-    axes[2].legend(title="Flight", fontsize=8)
+    for ax_i, (ycol, ylabel, title_prefix) in zip(
+        axes,
+        [
+            ("M0", r"$M_0$ (#/m$^3$)", "Total Number Concentration"),
+            ("D_eff", r"$D_{\mathrm{eff}}$ ($\mu$m)", "Effective Diameter"),
+            ("M3", r"$M_3$ ($\mu$m$^3$/m$^3$)", "Volume-Weighted Moment"),
+        ],
+    ):
+        sns.scatterplot(
+            data=df_plot,
+            x=variable,
+            y=ycol,
+            hue="flight",
+            alpha=0.6,
+            s=20,
+            ax=ax_i,
+        )
+        ax_i.set_xlabel(var_label, fontsize=11)
+        ax_i.set_ylabel(ylabel, fontsize=11)
+        ax_i.set_title(f"{title_prefix} vs {variable}", fontsize=12)
+        ax_i.set_xscale("log")
+        ax_i.set_yscale("log")
+        ax_i.grid(True, alpha=0.3)
+        ax_i.legend(title="Flight", fontsize=8)
 
     plt.tight_layout()
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
