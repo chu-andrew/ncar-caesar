@@ -229,8 +229,20 @@ def plot_scatter(df: pl.DataFrame) -> None:
     df_ratio_ln["ln_LWP_WVP"] = np.log(df_ratio_ln["LWP_WVP"])
 
     for df_plot, ycol, ylabel, title, suffix in [
-        (df_ratio_base, "LWP_WVP", "LWP / WVP", "LWP/WVP Ratio vs MCAO (low-level legs)", "lwp_wvp"),
-        (df_ratio_ln, "ln_LWP_WVP", "ln(LWP / WVP)", "ln(LWP/WVP) vs MCAO (low-level legs)", "ln_lwp_wvp"),
+        (
+            df_ratio_base,
+            "LWP_WVP",
+            "LWP / WVP",
+            "LWP/WVP Ratio vs MCAO (low-level legs)",
+            "lwp_wvp",
+        ),
+        (
+            df_ratio_ln,
+            "ln_LWP_WVP",
+            "ln(LWP / WVP)",
+            "ln(LWP/WVP) vs MCAO (low-level legs)",
+            "ln_lwp_wvp",
+        ),
     ]:
         fig, ax = plt.subplots(figsize=(8, 6))
         sns.scatterplot(
