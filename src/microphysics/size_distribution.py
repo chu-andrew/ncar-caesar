@@ -4,6 +4,8 @@ from typing import Literal, List, Tuple
 import numpy as np
 import polars as pl
 
+from nc.units import um_to_m, UM_PER_M
+
 
 @dataclass
 class SizeDistribution:
@@ -33,7 +35,7 @@ def aggregate_size_distribution(
         raise ValueError(f"Unknown aggregation method: {method}")
 
     # bin_widths is in um; convert to m to match dNdD (#/m^4) -> N (#/m^3)
-    N_total_per_bin = dNdD * (bin_widths * 1e-6)
+    N_total_per_bin = dNdD * um_to_m(bin_widths)
 
     metadata = {
         "method": method,
@@ -132,8 +134,8 @@ def compute_moment(
     Compute k-th moment of size distribution.
     M_k = Sum D_i^k * concentration_i * Delta_D_i
     """
-    D_m = bin_centers * 1e-6
-    dD_m = bin_widths * 1e-6
+    D_m = um_to_m(bin_centers)
+    dD_m = um_to_m(bin_widths)
 
     integrand = (D_m**moment)[:, np.newaxis] if concentration.ndim == 2 else D_m**moment
     integrand = (
@@ -149,6 +151,6 @@ def compute_moment(
     # Convert diameter contribution from m^k to um^k so that e.g.
     # D_eff = M_3/M_2 comes out in um directly.
     if moment > 0:
-        M = M * (1e6**moment)
+        M = M * (UM_PER_M**moment)
 
     return M

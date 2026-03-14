@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from nc.flights import FLIGHTS
 from nc.loader import PROJECT_ROOT, open_dataset
+from nc.units import m_to_km
 from nc.vars import DS_638_038 as v
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/gvr_summary")
@@ -13,7 +14,7 @@ PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/gvr_summary")
 def plot_gvr_summary(flight: str):
     with open_dataset(v.dataset, flight) as ds:
         times = ds[v.time].values
-        alt = ds[v.altitude].values / 1000.0  # m -> km
+        alt = m_to_km(ds[v.altitude].values)
         lwp = ds[v.lwp].values
         wvp = ds[v.wvp].values
 

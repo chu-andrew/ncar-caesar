@@ -4,6 +4,7 @@ import numpy as np
 from rdp import rdp
 
 from nc.loader import open_dataset
+from nc.units import m_to_km
 from nc.vars import DS_638_038 as v
 
 # per-flight RDP epsilon values (tuned visually)
@@ -71,7 +72,7 @@ def load_flight_segments(flight: str, epsilon: float = None) -> FlightSegments:
 
     with open_dataset(v.dataset, flight) as ds:
         times = ds[v.time].values
-        altitude = ds[v.altitude].values / 1000.0  # m to km
+        altitude = m_to_km(ds[v.altitude].values)
 
     mask = find_inflection_points(altitude, epsilon=epsilon)
     inflection_indices = np.where(mask)[0]

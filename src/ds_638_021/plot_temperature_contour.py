@@ -8,6 +8,7 @@ from ds_638_021.temperature_contour import load_contour_data
 from ds_638_052.cloud_base import load_cloud_base
 from nc.flights import MARLI_FILES
 from nc.loader import PROJECT_ROOT
+from nc.units import m_to_km
 from nc.vars import DS_638_021 as v
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/temperature_contour")
@@ -43,7 +44,7 @@ def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) 
     ax.plot(time, alt, color="black", linewidth=1.5, label="Aircraft altitude")
 
     cb_time, cb_height = load_cloud_base(flight)
-    cb_height_km = cb_height / 1000.0
+    cb_height_km = m_to_km(cb_height)
     valid = ~np.isnan(cb_height_km)
     ax.scatter(
         cb_time[valid],

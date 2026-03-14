@@ -1,6 +1,7 @@
 import polars as pl
 import xarray as xr
 
+from nc.units import m_to_km
 from nc.vars import DS_638_001 as v
 
 
@@ -14,7 +15,7 @@ def construct_df(ds: xr.Dataset) -> pl.DataFrame:
         vars_to_keep.add("hours_utc")
 
     if v.altitude in ds:
-        ds = ds.assign(alt_km=ds[v.altitude] / 1000.0)
+        ds = ds.assign(alt_km=m_to_km(ds[v.altitude]))
         vars_to_keep.add("alt_km")
 
     df_pandas = ds[list(vars_to_keep)].to_dataframe().reset_index()

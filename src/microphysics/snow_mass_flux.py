@@ -8,6 +8,7 @@ import polars as pl
 
 from ds_638_021.mcao import build_merged_dataset
 from microphysics.load import build_low_level_dataset, PHASE_ICE
+from nc.units import um_to_m, S_PER_HR, KG_PER_G
 
 
 def compute_snow_mass_flux(
@@ -33,8 +34,8 @@ def compute_snow_mass_flux(
     Returns:
         S in kg/m^2/s, shape () or (n_times,)
     """
-    D_m = bin_centers * 1e-6  # um -> m
-    dD_m = bin_widths * 1e-6  # um -> m
+    D_m = um_to_m(bin_centers)
+    dD_m = um_to_m(bin_widths)
 
     m_D = 0.044 * D_m**2  # kg (mass-size, a_m=0.044 kg/m^2)
     vt_D = 2.29 * D_m**0.18  # m/s (fall speed)
@@ -88,7 +89,7 @@ def build_flux_dataset() -> pl.DataFrame:
     # S is kg/m^2/s, LWP and WVP are g/m^2; convert to kg/m^2/1000
     # then S/WP = 1/s; multiply by 3600 to get 1/hr
     # ==> S / WP * 1000 * 3600
-    s_wp_to_per_hr = 3600 * 1000
+    s_wp_to_per_hr = S_PER_HR / KG_PER_G
     df = df.with_columns(
         pl.when(pl.col("LWP") > 0)
         .then(pl.col("S") / pl.col("LWP") * s_wp_to_per_hr)

@@ -11,6 +11,7 @@ import polars as pl
 from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
 from nc.loader import open_dataset
 from nc.time import utc_hours_to_datetime64
+from nc.units import ZERO_CELSIUS_IN_KELVIN
 from nc.vars import DS_638_001 as v001
 
 from ds_638_021.potential_temperature import compute_theta_850
@@ -99,7 +100,7 @@ def merge_flight_segment(
 
     # compute MCAO index: SST(K) - theta_850; RSTB is in degC
     df = df.with_columns(
-        (pl.col("RSTB") + 273.15).alias("SST_K"),
+        (pl.col("RSTB") + ZERO_CELSIUS_IN_KELVIN).alias("SST_K"),
     ).with_columns(
         (pl.col("SST_K") - pl.col("theta_850")).alias("MCAO"),
     )

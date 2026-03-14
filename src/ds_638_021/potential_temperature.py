@@ -1,5 +1,6 @@
-import metpy.calc as mpcalc
 import numpy as np
+
+import metpy.calc as mpcalc
 from metpy.units import units as munits
 
 from nc.flights import MARLI_FILES
