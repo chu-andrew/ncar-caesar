@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
 import numpy as np
+from rdp import rdp
 
 from nc.loader import open_dataset
-from nc.segmentation import find_inflection_points
 from nc.vars import DS_638_038 as v
 
 # per-flight RDP epsilon values (tuned visually)
@@ -52,6 +52,11 @@ class FlightSegments:
 
     def point_altitude(self, pt: int) -> float:
         return self.altitude[self.inflection_indices[pt]]
+
+
+def find_inflection_points(series: np.ndarray, epsilon: float) -> np.ndarray:
+    points = np.column_stack([np.arange(len(series)), series])
+    return rdp(points, epsilon=epsilon, return_mask=True)
 
 
 def load_flight_segments(flight: str, epsilon: float = None) -> FlightSegments:
