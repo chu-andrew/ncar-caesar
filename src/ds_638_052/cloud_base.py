@@ -34,10 +34,8 @@ def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
             ds.close()
 
         # convert datetime64 to fractional hours UTC
-        ns_since_midnight = (
-            (t - t.astype("datetime64[D]")).astype("timedelta64[ns]").astype(np.float64)
-        )
-        hours = ns_since_midnight / 3.6e12
+        midnight = t.astype("datetime64[D]")
+        hours = (t - midnight) / np.timedelta64(1, 'h')
 
         all_time.append(hours)
         all_cb.append(cb.astype(np.float64))
