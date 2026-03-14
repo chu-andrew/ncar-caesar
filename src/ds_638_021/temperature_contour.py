@@ -10,7 +10,7 @@ from ds_638_021.potential_temperature import mask_temperature_outliers
 def load_contour_data(flight: str) -> dict:
     filenames = MARLI_FILES[flight]
 
-    # use the first file's height grid as reference
+    # use the first file's height grid as reference (RF07 has two datasets)
     with open_dataset(v.dataset, filenames[0]) as ds:
         H = ds["H"].values
 
@@ -28,6 +28,7 @@ def load_contour_data(flight: str) -> dict:
             if h_file.shape[0] == H.shape[0]:
                 all_T.append(t_data)
             else:
+                # interpolate temperature from file's height grid (h_file) to reference grid (H)
                 t_interp = np.array(
                     [np.interp(H, h_file, t_data[i]) for i in range(t_data.shape[0])]
                 )

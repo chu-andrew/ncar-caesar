@@ -48,9 +48,9 @@ def height_to_pressure(h_km: np.ndarray) -> np.ndarray:
 
 def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
     """Potential temperature from temperature (degC) and pressure (hPa)."""
-    T_K = (t_celsius + 273.15) * munits.kelvin
+    T = t_celsius * munits.degC
     P = p_hpa * munits.hPa
-    return mpcalc.potential_temperature(P, T_K).to("kelvin").magnitude
+    return mpcalc.potential_temperature(P, T).to("kelvin").magnitude
 
 
 def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
