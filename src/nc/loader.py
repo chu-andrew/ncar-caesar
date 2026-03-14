@@ -18,11 +18,10 @@ def get_dataset_dir(dataset_id: str) -> str:
     return path
 
 
-NC_EXTENSIONS = ("*.nc", "*.cdf")
-
-
 def list_files(dataset_id: str) -> list[str]:
     """List available NetCDF filenames (.nc, .cdf) in a dataset, sorted."""
+    NC_EXTENSIONS = ("*.nc", "*.cdf")
+
     data_dir = get_dataset_dir(dataset_id)
     files = []
     for ext in NC_EXTENSIONS:
