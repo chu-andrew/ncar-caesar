@@ -1,12 +1,14 @@
 import os
 from typing import Tuple
 
+import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
 import polars as pl
 import seaborn as sns
 
+from ds_638_001.plot_summary import setup_map
 from nc.flights import LOW_LEVEL_LEGS
 from nc.loader import PROJECT_ROOT
 from microphysics.snow_mass_flux import build_flux_dataset, filter_legs
@@ -270,6 +272,63 @@ def plot_snow_rate_normalized_timeseries(
     return output_path
 
 
+def plot_pe_map(
+    df: pl.DataFrame,
+    pe_col: str,
+    pe_label: str,
+    output_path: str,
+    title_suffix: str = "All Flights",
+) -> str:
+    df_pd = df.filter(
+        pl.col(pe_col).is_not_null()
+        & (pl.col(pe_col) > 0)
+        & pl.col("alt_insitu").is_not_null()
+        & pl.col("lat").is_not_null()
+        & pl.col("lon").is_not_null()
+    ).to_pandas()
+
+    log_pe = np.log(df_pd[pe_col])
+    lon = df_pd["lon"].to_numpy()
+    lat = df_pd["lat"].to_numpy()
+
+    map_proj = ccrs.LambertConformal(
+        central_longitude=float(df_pd["lon"].mean()),
+        central_latitude=float(df_pd["lat"].mean()),
+    )
+    transform = ccrs.PlateCarree()
+
+    fig = plt.figure(figsize=(16, 7))
+    ax1 = fig.add_subplot(1, 2, 1, projection=map_proj)
+    ax2 = fig.add_subplot(1, 2, 2, projection=map_proj)
+
+    for ax in (ax1, ax2):
+        setup_map(ax)
+
+    sc1 = ax1.scatter(
+        lon, lat, c=log_pe, cmap="plasma", alpha=0.7, s=12, transform=transform
+    )
+    fig.colorbar(sc1, ax=ax1, label=f"ln({pe_label})", shrink=0.7)
+    ax1.set_title(pe_label)
+
+    sc2 = ax2.scatter(
+        lon,
+        lat,
+        c=df_pd["alt_insitu"],
+        cmap="viridis",
+        alpha=0.7,
+        s=12,
+        transform=transform,
+    )
+    fig.colorbar(sc2, ax=ax2, label="Altitude (m)", shrink=0.7)
+    ax2.set_title("Altitude")
+
+    fig.suptitle(f"{pe_label} and Altitude: {title_suffix}", fontsize=13)
+    plt.tight_layout()
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
 def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -292,6 +351,17 @@ def main():
     out_alt = os.path.join(PLOTS_DIR, "normalized_flux_vs_mcao_by_altitude.png")
     plot_normalized_flux_by_altitude(df, out_alt)
     print(f"Saved: {out_alt}")
+
+    pe_panels = [
+        ("S_over_LWP", r"$S$/LWP"),
+        ("S_over_WVP", r"$S$/WVP"),
+        ("S_over_VMR_VXL", r"$S$/VMR"),
+    ]
+
+    for pe_col, pe_label in pe_panels:
+        out = os.path.join(PLOTS_DIR, f"pe_map_{pe_col.lower()}.png")
+        plot_pe_map(df, pe_col, pe_label, out)
+        print(f"Saved: {out}")
 
     # per-leg plots
     for flight, legs in LOW_LEVEL_LEGS.items():

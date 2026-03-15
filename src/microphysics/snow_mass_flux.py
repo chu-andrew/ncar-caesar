@@ -56,18 +56,22 @@ def compute_snow_mass_flux(
     return S
 
 
-def load_vmr_altitude(flight: str) -> pl.DataFrame:
-    """Load VMR_VXL and altitude from 638-001 for a flight."""
+def load_insitu_ancillary(flight: str) -> pl.DataFrame:
+    """Load VMR_VXL, altitude, latitude, and longitude from 638-001 for a flight."""
     with open_dataset(v001.dataset, flight) as ds:
         times = ds[v001.time].values
         vmr = ds[v001.vmr_vxl].values
         alt = ds[v001.altitude].values
+        lat = ds[v001.latitude].values
+        lon = ds[v001.longitude].values
 
     return pl.DataFrame(
         {
             "time": times,
             "VMR_VXL": vmr.astype(np.float64),
             "alt_insitu": alt.astype(np.float64),
+            "lat": lat.astype(np.float64),
+            "lon": lon.astype(np.float64),
         }
     )
 
@@ -83,9 +87,7 @@ def filter_legs(
         legs: e.g. {"RF07": [(8, 9), (14, 15)]}
     """
     keep = [
-        (flight, f"{s}-{e}")
-        for flight, leg_list in legs.items()
-        for s, e in leg_list
+        (flight, f"{s}-{e}") for flight, leg_list in legs.items() for s, e in leg_list
     ]
     if not keep:
         return df.filter(pl.lit(False))
@@ -134,7 +136,7 @@ def build_flux_dataset() -> pl.DataFrame:
     frames = []
     for flight in flights:
         df_flight = df.filter(pl.col("flight") == flight)
-        df_vmr = load_vmr_altitude(flight)
+        df_vmr = load_insitu_ancillary(flight)
         df_flight = df_flight.sort("time").join_asof(
             df_vmr.sort("time"),
             on="time",
