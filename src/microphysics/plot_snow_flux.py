@@ -5,6 +5,7 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
+import pandas as pd
 import polars as pl
 import seaborn as sns
 
@@ -329,6 +330,99 @@ def plot_pe_map(
     return output_path
 
 
+def plot_pe_vs_mcao_hexbin(
+    df: pl.DataFrame,
+    output_path: str,
+    n_alt_bins: int = 4,
+) -> str:
+    pe_configs = [
+        ("S_over_LWP", r"ln(S/LWP) (hr$^{-1}$)", r"$S$/LWP"),
+        ("S_over_WVP", r"ln(S/WVP) (hr$^{-1}$)", r"$S$/WVP"),
+        (
+            "S_over_VMR_VXL",
+            r"ln(S/VMR_VXL) (kg m$^{-2}$ s$^{-1}$ ppmv$^{-1}$)",
+            r"$S$/VMR",
+        ),
+    ]
+
+    df_base = df.filter(
+        pl.col("MCAO").is_not_null()
+        & ~pl.col("MCAO").is_nan()
+        & pl.col("alt_insitu").is_not_null()
+        & ~pl.col("alt_insitu").is_nan()
+    ).to_pandas()
+
+    df_base["alt_bin"], bin_edges = pd.qcut(
+        df_base["alt_insitu"],
+        q=n_alt_bins,
+        retbins=True,
+        labels=False,
+        duplicates="drop",
+    )
+    actual_n_bins = int(df_base["alt_bin"].nunique())
+    bin_labels = [
+        f"{bin_edges[i]:.0f}–{bin_edges[i + 1]:.0f} m" for i in range(actual_n_bins)
+    ]
+
+    n_rows = len(pe_configs)
+    n_cols = actual_n_bins
+    fig, axes = plt.subplots(
+        n_rows, n_cols, figsize=(4.5 * n_cols, 4 * n_rows), squeeze=False
+    )
+
+    # draw all hexbins, collect to find global count range
+    all_hb_objects = {}  # (row, col) -> (hb, ax, n)
+
+    for row, (pe_col, ylabel, pe_label) in enumerate(pe_configs):
+        df_pe = df_base[df_base[pe_col].notna() & (df_base[pe_col] > 0)]
+        valid = df_pe["MCAO"].notna() & df_pe[pe_col].notna()
+        df_pe = df_pe[valid].copy()
+        df_pe["log_pe"] = np.log(df_pe[pe_col])
+
+        for col in range(actual_n_bins):
+            ax = axes[row, col]
+            df_bin = df_pe[df_pe["alt_bin"] == col]
+            n = len(df_bin)
+
+            hb = ax.hexbin(
+                df_bin["MCAO"],
+                df_bin["log_pe"],
+                gridsize=30,
+                cmap="inferno",
+                mincnt=1,
+            )
+            all_hb_objects[(row, col)] = (hb, ax, n)
+            ax.grid(True, alpha=0.2, color="white")
+
+            if row == 0:
+                ax.set_title(f"{bin_labels[col]}\n(n={n})", fontsize=11)
+            else:
+                ax.set_title(f"n={n}", fontsize=10)
+
+            if row == n_rows - 1:
+                ax.set_xlabel("MCAO (K)", fontsize=11)
+
+            if col == 0:
+                ax.set_ylabel(ylabel, fontsize=10)
+
+    # apply one consistent color scale across all panels
+    if all_hb_objects:
+        global_vmax = max(hb.get_array().max() for hb, _, _ in all_hb_objects.values())
+        for hb, _, _ in all_hb_objects.values():
+            hb.set_clim(1, global_vmax)
+
+        # single colorbar in right margin
+        last_hb = all_hb_objects[max(all_hb_objects)][0]
+        fig.subplots_adjust(right=0.88, top=0.93)
+        cbar_ax = fig.add_axes([0.90, 0.1, 0.02, 0.8])
+        fig.colorbar(last_hb, cax=cbar_ax, label="count")
+
+    fig.suptitle(r"$\ln$(PE) vs MCAO by altitude bin", fontsize=14)
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
 def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -351,6 +445,10 @@ def main():
     out_alt = os.path.join(PLOTS_DIR, "normalized_flux_vs_mcao_by_altitude.png")
     plot_normalized_flux_by_altitude(df, out_alt)
     print(f"Saved: {out_alt}")
+
+    out_hexbin = os.path.join(PLOTS_DIR, "pe_vs_mcao_hexbin_by_altitude.png")
+    plot_pe_vs_mcao_hexbin(df, out_hexbin)
+    print(f"Saved: {out_hexbin}")
 
     pe_panels = [
         ("S_over_LWP", r"$S$/LWP"),
