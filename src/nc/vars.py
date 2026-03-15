@@ -9,6 +9,7 @@ class _Ds638001Vars:
     longitude: str = "LONC"
     altitude: str = "GGALT"
     surface_temp: str = "RSTB"
+    vmr_vxl: str = "VMR_VXL"
 
 
 @dataclass(frozen=True)

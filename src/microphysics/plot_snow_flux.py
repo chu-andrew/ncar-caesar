@@ -1,7 +1,3 @@
-"""
-Analyze and plot snow mass flux relationships.
-"""
-
 import os
 from typing import Tuple
 
@@ -11,8 +7,9 @@ import numpy as np
 import polars as pl
 import seaborn as sns
 
+from nc.flights import LOW_LEVEL_LEGS
 from nc.loader import PROJECT_ROOT
-from microphysics.snow_mass_flux import build_flux_dataset
+from microphysics.snow_mass_flux import build_flux_dataset, filter_legs
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/microphysics_beta/plots/snow_flux")
 
@@ -103,46 +100,101 @@ def plot_binned_flux(df: pl.DataFrame, output_path: str) -> str:
 
 
 def plot_normalized_flux_vs_mcao(df: pl.DataFrame, output_path: str) -> str:
-    """Scatterplot of MCAO vs S/LWP and S/WVP."""
+    """Scatterplot of MCAO vs S/LWP, S/WVP, and S/VMR_VXL."""
+    df_pd = df.to_pandas()
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 14), sharex=True)
+
+    panels = [
+        (
+            ax1,
+            "S_over_LWP",
+            r"$S$/LWP (hr$^{-1}$)",
+            r"$S$/LWP vs MCAO (low-level legs)",
+        ),
+        (
+            ax2,
+            "S_over_WVP",
+            r"$S$/WVP (hr$^{-1}$)",
+            r"$S$/WVP vs MCAO (low-level legs)",
+        ),
+        (
+            ax3,
+            "S_over_VMR_VXL",
+            r"$S$ / VMR_VXL (kg m$^{-2}$ s$^{-1}$ ppmv$^{-1}$)",
+            r"$S$ / VMR_VXL vs MCAO (low-level legs)",
+        ),
+    ]
+
+    for ax, ycol, ylabel, title in panels:
+        df_plot = df_pd[df_pd[ycol].notna()]
+        sns.scatterplot(
+            data=df_plot,
+            x="MCAO",
+            y=ycol,
+            hue="flight",
+            alpha=0.5,
+            s=20,
+            ax=ax,
+        )
+        ax.set_yscale("log")
+        ax.set_ylabel(ylabel, fontsize=12)
+        ax.set_title(title, fontsize=13)
+        ax.legend(title="Flight", fontsize=8)
+        ax.grid(True, alpha=0.3)
+
+    ax3.set_xlabel("MCAO $(K)$", fontsize=12)
+    plt.tight_layout()
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
+def plot_normalized_flux_by_altitude(
+    df: pl.DataFrame, output_path: str, title_suffix: str = "All Flights"
+) -> str:
+    """Scatterplot of S/WVP, S/LWP, S/VMR_VXL vs MCAO colored by flight altitude."""
     df_valid = df.filter(
-        pl.col("S_over_LWP").is_not_null() & pl.col("S_over_WVP").is_not_null()
-    )
+        pl.col("MCAO").is_not_null()
+        & ~pl.col("MCAO").is_nan()
+        & pl.col("alt_insitu").is_not_null()
+        & ~pl.col("alt_insitu").is_nan()
+    ).to_pandas()
 
-    df_pd = df_valid.to_pandas()
+    panels = [
+        ("S_over_WVP", r"$S$/WVP (hr$^{-1}$)", r"$S$/WVP vs MCAO"),
+        ("S_over_LWP", r"$S$/LWP (hr$^{-1}$)", r"$S$/LWP vs MCAO"),
+        (
+            "S_over_VMR_VXL",
+            r"$S$ / VMR_VXL (kg m$^{-2}$ s$^{-1}$ ppmv$^{-1}$)",
+            r"$S$ / VMR_VXL vs MCAO",
+        ),
+    ]
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), sharex=True)
+    fig, axes = plt.subplots(3, 1, figsize=(10, 14), sharex=True)
 
-    sns.scatterplot(
-        data=df_pd,
-        x="MCAO",
-        y="S_over_LWP",
-        hue="flight",
-        alpha=0.5,
-        s=20,
-        ax=ax1,
-    )
-    ax1.set_yscale("log")
-    ax1.set_ylabel(r"$S$/LWP (hr$^{-1}$)", fontsize=12)
-    ax1.set_title(r"$S$/LWP vs MCAO (low-level legs)", fontsize=13)
-    ax1.legend(title="Flight", fontsize=8)
-    ax1.grid(True, alpha=0.3)
+    alt_min = df_valid["alt_insitu"].min()
+    alt_max = df_valid["alt_insitu"].max()
 
-    sns.scatterplot(
-        data=df_pd,
-        x="MCAO",
-        y="S_over_WVP",
-        hue="flight",
-        alpha=0.5,
-        s=20,
-        ax=ax2,
-    )
-    ax2.set_yscale("log")
-    ax2.set_xlabel("MCAO $(K)$", fontsize=12)
-    ax2.set_ylabel(r"$S$/WVP (hr$^{-1}$)", fontsize=12)
-    ax2.set_title(r"$S$/WVP vs MCAO (low-level legs)", fontsize=13)
-    ax2.legend(title="Flight", fontsize=8)
-    ax2.grid(True, alpha=0.3)
+    for ax, (ycol, ylabel, title) in zip(axes, panels):
+        df_plot = df_valid[df_valid[ycol].notna() & (df_valid[ycol] > 0)]
+        sc = ax.scatter(
+            df_plot["MCAO"],
+            df_plot[ycol],
+            c=df_plot["alt_insitu"],
+            cmap="viridis",
+            vmin=alt_min,
+            vmax=alt_max,
+            alpha=0.5,
+            s=15,
+        )
+        ax.set_yscale("log")
+        ax.set_ylabel(ylabel, fontsize=11)
+        ax.set_title(f"{title} ({title_suffix})", fontsize=12)
+        ax.grid(True, alpha=0.3)
+        fig.colorbar(sc, ax=ax, label="Altitude (m)")
 
+    axes[-1].set_xlabel("MCAO $(K)$", fontsize=12)
     plt.tight_layout()
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
@@ -236,6 +288,26 @@ def main():
     out_norm = os.path.join(PLOTS_DIR, "normalized_flux_vs_mcao.png")
     plot_normalized_flux_vs_mcao(df, out_norm)
     print(f"Saved: {out_norm}")
+
+    out_alt = os.path.join(PLOTS_DIR, "normalized_flux_vs_mcao_by_altitude.png")
+    plot_normalized_flux_by_altitude(df, out_alt)
+    print(f"Saved: {out_alt}")
+
+    # per-leg plots
+    for flight, legs in LOW_LEVEL_LEGS.items():
+        for start, end in legs:
+            label = f"{flight.lower()}_{start}-{end}"
+            df_leg = filter_legs(df, {flight: [(start, end)]})
+            if df_leg.is_empty():
+                continue
+
+            out = os.path.join(
+                PLOTS_DIR, f"normalized_flux_vs_mcao_by_altitude_{label}.png"
+            )
+            plot_normalized_flux_by_altitude(
+                df_leg, out, title_suffix=f"{flight} Leg {start}-{end}"
+            )
+            print(f"Saved: {out}")
 
     # compute global y-limits for S/LWP and S/WVP across all flights
     s_over_lwp = df["S_over_LWP"].drop_nulls().to_numpy()
