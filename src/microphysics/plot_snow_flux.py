@@ -5,9 +5,9 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
-import pandas as pd
 import polars as pl
 import seaborn as sns
+from scipy.stats import gaussian_kde
 
 from ds_638_001.plot_summary import setup_map
 from nc.flights import LOW_LEVEL_LEGS
@@ -350,19 +350,9 @@ def plot_pe_vs_mcao_hexbin(
         & ~pl.col("MCAO").is_nan()
         & pl.col("alt_insitu").is_not_null()
         & ~pl.col("alt_insitu").is_nan()
-    ).to_pandas()
-
-    df_base["alt_bin"], bin_edges = pd.qcut(
-        df_base["alt_insitu"],
-        q=n_alt_bins,
-        retbins=True,
-        labels=False,
-        duplicates="drop",
     )
-    actual_n_bins = int(df_base["alt_bin"].nunique())
-    bin_labels = [
-        f"{bin_edges[i]:.0f}–{bin_edges[i + 1]:.0f} m" for i in range(actual_n_bins)
-    ]
+    df_base, bin_edges, bin_labels = _altitude_bins(df_base, n_alt_bins)
+    actual_n_bins = len(bin_edges) - 1
 
     n_rows = len(pe_configs)
     n_cols = actual_n_bins
@@ -374,19 +364,18 @@ def plot_pe_vs_mcao_hexbin(
     all_hb_objects = {}  # (row, col) -> (hb, ax, n)
 
     for row, (pe_col, ylabel, pe_label) in enumerate(pe_configs):
-        df_pe = df_base[df_base[pe_col].notna() & (df_base[pe_col] > 0)]
-        valid = df_pe["MCAO"].notna() & df_pe[pe_col].notna()
-        df_pe = df_pe[valid].copy()
-        df_pe["log_pe"] = np.log(df_pe[pe_col])
+        df_pe = df_base.filter(
+            pl.col(pe_col).is_not_null() & (pl.col(pe_col) > 0)
+        ).with_columns(pl.col(pe_col).log().alias("log_pe"))
 
         for col in range(actual_n_bins):
             ax = axes[row, col]
-            df_bin = df_pe[df_pe["alt_bin"] == col]
+            df_bin = df_pe.filter(pl.col("alt_bin") == col)
             n = len(df_bin)
 
             hb = ax.hexbin(
-                df_bin["MCAO"],
-                df_bin["log_pe"],
+                df_bin["MCAO"].to_numpy(),
+                df_bin["log_pe"].to_numpy(),
                 gridsize=30,
                 cmap="inferno",
                 mincnt=1,
@@ -423,6 +412,108 @@ def plot_pe_vs_mcao_hexbin(
     return output_path
 
 
+def _altitude_bins(df: pl.DataFrame, n_bins: int):
+    quantile_pts = np.linspace(0, 1, n_bins + 1)
+    bin_edges = np.unique(np.quantile(df["alt_insitu"].to_numpy(), quantile_pts))
+    actual_n = len(bin_edges) - 1
+    labels = [f"{bin_edges[i]:.0f}–{bin_edges[i + 1]:.0f} m" for i in range(actual_n)]
+    alt_bins = np.clip(
+        np.digitize(df["alt_insitu"].to_numpy(), bin_edges) - 1, 0, actual_n - 1
+    )
+    return df.with_columns(pl.Series("alt_bin", alt_bins)), bin_edges, labels
+
+
+def plot_kde_by_altitude_bin(
+    df: pl.DataFrame,
+    output_path: str,
+    n_alt_bins: int = 4,
+) -> str:
+    """
+    KDE distributions of MCAO and log(PE) stratified by altitude bins.
+
+    Each panel shows one KDE curve per altitude bin plus an overall background,
+    with mean +- std markers.
+    """
+    df_base = df.filter(
+        pl.col("MCAO").is_not_null()
+        & ~pl.col("MCAO").is_nan()
+        & pl.col("alt_insitu").is_not_null()
+        & ~pl.col("alt_insitu").is_nan()
+    )
+    df_base, _, bin_labels = _altitude_bins(df_base, n_alt_bins)
+    actual_n_bins = len(bin_labels)
+
+    pe_cols = ["S_over_LWP", "S_over_WVP", "S_over_VMR_VXL"]
+    pe_labels = [r"$S$/LWP", r"$S$/WVP", r"$S$/VMR"]
+
+    colors = plt.cm.plasma(np.linspace(0.1, 0.85, actual_n_bins))
+    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+
+    def _draw_kde_panel(ax, all_vals, bin_val_list, xlabel, title):
+        all_vals = all_vals[np.isfinite(all_vals)]
+        bin_val_list = [v[np.isfinite(v)] for v in bin_val_list]
+        x_range = np.linspace(all_vals.min(), all_vals.max(), 300)
+        kde_all = gaussian_kde(all_vals)
+        y_all = kde_all(x_range)
+        ax.fill_between(x_range, y_all, alpha=0.15, color="gray")
+        ax.plot(x_range, y_all, color="gray", alpha=0.5, linewidth=1.5, label="All")
+
+        y_peak = y_all.max()
+        marker_ys = np.linspace(y_peak * 1.20, y_peak * 1.80, actual_n_bins)
+
+        for i, (vals, color) in enumerate(zip(bin_val_list, colors)):
+            kde_bin = gaussian_kde(vals)
+            ax.plot(
+                x_range, kde_bin(x_range), color=color, linewidth=2, label=bin_labels[i]
+            )
+            mean, std = np.mean(vals), np.std(vals)
+            ax.errorbar(
+                mean,
+                marker_ys[i],
+                xerr=std,
+                fmt="o",
+                color=color,
+                markersize=8,
+                capsize=5,
+                linewidth=2,
+                zorder=5,
+            )
+
+        ax.set_ylim(bottom=0, top=y_peak * 2.00)
+        ax.set_xlabel(xlabel, fontsize=11)
+        ax.set_ylabel("Density", fontsize=11)
+        ax.set_title(title, fontsize=11)
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+
+    # MCAO
+    mcao_all = df_base["MCAO"].to_numpy()
+    mcao_by_bin = [
+        df_base.filter(pl.col("alt_bin") == i)["MCAO"].to_numpy()
+        for i in range(actual_n_bins)
+    ]
+    _draw_kde_panel(axes[0], mcao_all, mcao_by_bin, "MCAO (K)", "MCAO")
+
+    # log(PE) variables
+    for ax, pe_col, pe_label in zip(axes[1:], pe_cols, pe_labels):
+        df_pe = df_base.filter(
+            pl.col(pe_col).is_not_null() & (pl.col(pe_col) > 0)
+        ).with_columns(pl.col(pe_col).log().alias("log_pe"))
+
+        all_vals = df_pe["log_pe"].to_numpy()
+        by_bin = [
+            df_pe.filter(pl.col("alt_bin") == i)["log_pe"].to_numpy()
+            for i in range(actual_n_bins)
+        ]
+        _draw_kde_panel(ax, all_vals, by_bin, rf"$\ln$({pe_label})", pe_label)
+
+    fig.suptitle("MCAO and PE distributions by altitude bin", fontsize=13)
+    plt.tight_layout()
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
 def main():
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -449,6 +540,10 @@ def main():
     out_hexbin = os.path.join(PLOTS_DIR, "pe_vs_mcao_hexbin_by_altitude.png")
     plot_pe_vs_mcao_hexbin(df, out_hexbin)
     print(f"Saved: {out_hexbin}")
+
+    out_kde = os.path.join(PLOTS_DIR, "kde_by_altitude.png")
+    plot_kde_by_altitude_bin(df, out_kde)
+    print(f"Saved: {out_kde}")
 
     pe_panels = [
         ("S_over_LWP", r"$S$/LWP"),
