@@ -3,7 +3,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ds_638_021.potential_temperature import P_850, height_to_pressure
 from ds_638_021.temperature_contour import load_contour_data
 from ds_638_052.cloud_base import load_cloud_base
 from nc.flights import MARLI_FILES
@@ -30,9 +29,7 @@ def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) 
         plt.FuncFormatter(lambda h, _: f"{int(h):02d}:{int((h % 1) * 60):02d}")
     )
 
-    p_levels = height_to_pressure(H)
-    idx_850 = np.argmin(np.abs(p_levels - P_850))
-    h_850 = H[idx_850]
+    h_850 = data["h_850"]
     ax.axhline(
         h_850,
         color="black",

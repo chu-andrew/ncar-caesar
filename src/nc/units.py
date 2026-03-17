@@ -1,4 +1,6 @@
 import numpy as np
+import metpy.calc as mpcalc
+from metpy.units import units as munits
 
 # temperature
 ZERO_CELSIUS_IN_KELVIN = 273.15
@@ -18,6 +20,12 @@ KG_PER_G = 1e-3
 
 def celsius_to_kelvin(t: float) -> float:
     return t + ZERO_CELSIUS_IN_KELVIN
+
+
+def wvmr_to_specific_humidity(wvmr_g_kg: np.ndarray) -> np.ndarray:
+    """Convert water vapor mixing ratio (g/kg) to specific humidity (kg/kg)."""
+    w = wvmr_g_kg * munits("g/kg")
+    return mpcalc.specific_humidity_from_mixing_ratio(w).to("kg/kg").magnitude
 
 
 def m_to_km(x: np.ndarray) -> np.ndarray:

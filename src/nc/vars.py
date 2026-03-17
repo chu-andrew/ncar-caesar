@@ -19,6 +19,8 @@ class _Ds638021Vars:
     altitude: str = "Alt"
     bin_heights: str = "H"
     temperature: str = "T"
+    wvmr: str = "WVMR"
+    fill_value: float = 9999.0
 
 
 @dataclass(frozen=True)

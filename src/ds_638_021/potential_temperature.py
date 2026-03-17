@@ -1,10 +1,12 @@
 import numpy as np
 
 import metpy.calc as mpcalc
+import metpy.constants as mpconst
 from metpy.units import units as munits
 
 from nc.flights import MARLI_FILES
 from nc.loader import open_dataset
+from nc.units import M_PER_KM, celsius_to_kelvin, wvmr_to_specific_humidity
 from nc.vars import DS_638_021 as v
 
 P_850 = 850  # hPa
@@ -19,7 +21,7 @@ def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
     """
 
     T = T.astype(np.float64, copy=True)
-    T[(T >= 9999.0) | (T < -100) | (T > 100)] = np.nan
+    T[(T >= v.fill_value) | (T < -100) | (T > 100)] = np.nan
 
     if T.ndim == 1:
         T = T[:, np.newaxis]
@@ -42,12 +44,38 @@ def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
     return T[:, 0] if squeeze else T
 
 
-def height_to_pressure(h_km: np.ndarray) -> np.ndarray:
-    """Convert height (km MSL) to pressure (hPa) using standard atmosphere."""
-    return mpcalc.height_to_pressure_std(h_km * munits.km).to("hPa").magnitude
+def height_to_pressure(
+    H_km: np.ndarray,
+    T_K: np.ndarray,
+    q: np.ndarray,
+) -> np.ndarray:
+    P_SEA = 1013.25  # hPa
+
+    G = mpconst.g.magnitude  # m / s^2
+    RD = mpconst.Rd.magnitude  # J / (kg K)
+
+    Tv = T_K * (1.0 + 0.61 * q)
+    H_m = H_km * M_PER_KM
+    return P_SEA * np.exp(-G * H_m[np.newaxis, :] / (RD * Tv))
 
 
-def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
+def find_nearest_pressure_bin(
+    p_levels: np.ndarray, target_hpa: float, H: np.ndarray
+) -> tuple[int, np.ndarray]:
+    """
+    Find the altitude bin closest to a target pressure level.
+
+    Returns (idx, p_mean) where p_mean is the time-averaged pressure profile.
+    """
+    valid_bins = np.any(np.isfinite(p_levels), axis=0)
+    p_mean = np.full(H.shape, np.inf)
+    p_mean[valid_bins] = np.nanmean(p_levels[:, valid_bins], axis=0)
+    return int(np.argmin(np.abs(p_mean - target_hpa))), p_mean
+
+
+def potential_temperature(
+    t_celsius: np.ndarray, p_hpa: np.ndarray | float
+) -> np.ndarray:
     """Potential temperature from temperature (degC) and pressure (hPa)."""
     T = t_celsius * munits.degC
     P = p_hpa * munits.hPa
@@ -55,22 +83,25 @@ def potential_temperature(t_celsius: np.ndarray, p_hpa: float) -> np.ndarray:
 
 
 def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
-    H = ds["H"].values  # bin heights (MSL), km
-    T = ds["T"].values  # atmospheric temperature, degC (n_times x n_bins)
-    time = ds["time"].values  # UTC time
+    H = ds["H"].values  # bin heights (MSL), km, shape (n_bins,)
+    T = ds["T"].values  # atmospheric temperature, degC, shape (n_times, n_bins)
+    WVMR = ds["WVMR"].values  # water vapor mixing ratio, g/kg, shape (n_times, n_bins)
+    time = ds["time"].values
 
-    # convert all height bins to pressure
-    p_levels = height_to_pressure(H)
+    T_K = celsius_to_kelvin(T)
+    WVMR[WVMR >= v.fill_value] = np.nan
+    q = wvmr_to_specific_humidity(WVMR)
 
-    # find bin closest to 850 hPa
-    idx = np.argmin(np.abs(p_levels - P_850))
+    p_levels = height_to_pressure(H, T_K, q)
+    idx, p_mean = find_nearest_pressure_bin(p_levels, P_850, H)
     h_actual = float(H[idx])
-    p_actual = float(p_levels[idx])
+    p_actual = float(p_mean[idx])
 
-    # extract temperature time-series at that level, mask outliers
+    # extract temperature and per-time-step pressure at that level
     t_at_level = mask_temperature_outliers(T[:, idx])
+    p_at_level = p_levels[:, idx]
 
-    theta = potential_temperature(t_at_level, p_actual)
+    theta = potential_temperature(t_at_level, p_at_level)
     return time, theta, h_actual, p_actual
 
 
