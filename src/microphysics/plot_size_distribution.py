@@ -1,15 +1,29 @@
+"""
+Analyze and plot particle size distributions for low-level legs.
+"""
+
+import os
 from typing import Literal, List, Tuple
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import numpy as np
+import pandas as pd
 import polars as pl
 import seaborn as sns
 
+from nc.loader import PROJECT_ROOT
+from microphysics.load import build_low_level_dataset, PHASE_ICE
 from microphysics.size_distribution import (
     SizeDistribution,
     aggregate_size_distribution,
     compute_moment,
+    compute_distribution_statistics,
+    bin_by_water_path,
+)
+
+PLOTS_DIR = os.path.join(
+    PROJECT_ROOT, "output/microphysics_beta/plots/size_distributions"
 )
 
 
@@ -247,75 +261,6 @@ def plot_size_distribution_heatmap(
     return output_path
 
 
-def plot_snow_rate_normalized_timeseries(
-    df: pl.DataFrame,
-    flight: str,
-    output_path: str,
-    ylim: Tuple[float, float] = None,
-) -> str:
-    """
-    Time series of S/LWP and S/WVP for each low-level leg of a flight.
-    """
-    df_flight = df.filter(pl.col("flight") == flight)
-    if df_flight.is_empty():
-        return output_path
-
-    # partition once into per-segment dicts; sort time within each segment
-    partitions = df_flight.sort("time").partition_by("segment_id", as_dict=True)
-    seg_data = {}
-    seg_durations_ns = []
-    for (seg_id,), df_seg in sorted(partitions.items()):
-        times = df_seg["time"].to_numpy()
-        seg_data[seg_id] = (
-            times,
-            df_seg["S_over_LWP"].to_numpy(),
-            df_seg["S_over_WVP"].to_numpy(),
-        )
-        if len(times) >= 2:
-            seg_durations_ns.append(int(times[-1]) - int(times[0]))
-
-    seg_ids = list(seg_data.keys())
-    max_duration_ns = max(seg_durations_ns) if seg_durations_ns else 0
-
-    n_segs = len(seg_ids)
-    fig, axes = plt.subplots(
-        1, n_segs, sharey=True, figsize=(max(10, 4 * n_segs), 5), squeeze=False
-    )
-    axes = axes[0]
-
-    for ax, seg_id in zip(axes, seg_ids):
-        times, s_lwp, s_wvp = seg_data[seg_id]
-
-        ax.plot(times, s_lwp, color="tab:blue", linewidth=1.2, label=r"$S$/LWP")
-        ax.plot(times, s_wvp, color="tab:orange", linewidth=1.2, label=r"$S$/WVP")
-
-        # enforce consistent time span across subplots within this flight
-        if len(times) >= 1:
-            t0 = times[0]
-            t1 = t0 + np.timedelta64(max_duration_ns, "ns")
-            ax.set_xlim(t0, t1)
-
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
-        ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
-        ax.set_xlabel("Time (UTC)", fontsize=11)
-        ax.set_title(f"Leg {seg_id}", fontsize=11)
-        ax.grid(True, alpha=0.3)
-        ax.legend(fontsize=9)
-
-    axes[0].set_yscale("log")
-    if ylim is not None:
-        axes[0].set_ylim(ylim)
-
-    axes[0].set_ylabel(r"Snow rate / water path (hr$^{-1}$)", fontsize=10)
-    fig.suptitle(f"{flight}: Snow rate normalized by LWP and WVP", fontsize=13)
-    plt.tight_layout()
-
-    fig.savefig(output_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    return output_path
-
-
 def plot_integrated_properties(
     df: pl.DataFrame, output_path: str, variable: Literal["WVP", "LWP"] = "WVP"
 ) -> str:
@@ -346,8 +291,6 @@ def plot_integrated_properties(
         Deff_values.append(D_eff)
         var_values.append(var_value)
         flights.append(flight)
-
-    import pandas as pd
 
     df_plot = pd.DataFrame(
         {
@@ -391,3 +334,95 @@ def plot_integrated_properties(
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
     return output_path
+
+
+def main():
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+
+    df = build_low_level_dataset(phase_filter=frozenset({PHASE_ICE}))
+
+    # get bin info from first row
+    first_row = df.row(0, named=True)
+    bin_centers = np.array(first_row["bin_centers"])
+    bin_widths = np.array(first_row["bin_widths"])
+
+    # concatenate all concentration arrays
+    all_conc = []
+    for row in df.iter_rows(named=True):
+        all_conc.append(np.array(row["concentration"]))
+
+    concentration = np.column_stack(all_conc)
+
+    sd_mean = aggregate_size_distribution(
+        concentration, bin_centers, bin_widths, method="mean"
+    )
+    stats = compute_distribution_statistics(concentration, bin_centers, bin_widths)
+
+    wvp_binned = bin_by_water_path(df, variable="WVP", n_bins=5, method="quantile")
+    lwp_binned = bin_by_water_path(df, variable="LWP", n_bins=5, method="quantile")
+
+    print("Generating plots...")
+    plot_mean_size_distribution(sd_mean, os.path.join(PLOTS_DIR, "mean_dNdD_vs_D.png"))
+
+    for metric in ["WVP", "LWP"]:
+        plot_size_distribution_scatter(
+            df,
+            variable=metric,
+            output_path=os.path.join(PLOTS_DIR, f"dNdD_vs_D_colored_by_{metric}.png"),
+        )
+        plot_integrated_properties(
+            df,
+            output_path=os.path.join(
+                PLOTS_DIR, f"integrated_properties_vs_{metric}.png"
+            ),
+            variable=metric,
+        )
+
+    plot_binned_size_distributions(
+        wvp_binned,
+        variable="WVP",
+        output_path=os.path.join(PLOTS_DIR, "dNdD_vs_D_stratified_by_WVP.png"),
+    )
+    plot_binned_size_distributions(
+        lwp_binned,
+        variable="LWP",
+        output_path=os.path.join(PLOTS_DIR, "dNdD_vs_D_stratified_by_LWP.png"),
+    )
+
+    # compute global concentration range for consistent color scale
+    # add small offset to avoid log(0) = -inf
+    conc_min = np.log(np.nanmin(concentration + 1e-10))
+    conc_max = np.log(np.nanmax(concentration + 1e-10))
+
+    # generate heatmap for each flight, with one panel per low-level leg
+    flights = df["flight"].unique().sort()
+    for flight in flights:
+        df_flight = df.filter(df["flight"] == flight)
+        if df_flight.is_empty():
+            continue
+
+        segments = []
+        for seg_id in df_flight["segment_id"].unique().sort():
+            df_seg = df_flight.filter(df_flight["segment_id"] == seg_id)
+            times = []
+            conc_list = []
+            for row in df_seg.iter_rows(named=True):
+                times.append(row["time"])
+                conc_list.append(np.array(row["concentration"]))
+            segments.append((seg_id, np.column_stack(conc_list), np.array(times)))
+
+        # sort segments by start time
+        segments.sort(key=lambda s: s[2][0])
+
+        plot_size_distribution_heatmap(
+            segments,
+            bin_centers,
+            os.path.join(PLOTS_DIR, f"dNdD_heatmap_{flight}.png"),
+            vmin=conc_min,
+            vmax=conc_max,
+            title=f"{flight}: Size distribution on low-level legs",
+        )
+
+
+if __name__ == "__main__":
+    main()

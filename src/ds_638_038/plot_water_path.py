@@ -4,28 +4,23 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from nc.loader import DATASET_VARS, PROJECT_ROOT, open_dataset
+from nc.flights import LOW_LEVEL_LEGS
+from nc.loader import PROJECT_ROOT, open_dataset
+from nc.vars import DS_638_038 as v
 from ds_638_038.segments import load_flight_segments
 
-_vars = DATASET_VARS["638-038"]
-DATASET = "638-038"
-PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{DATASET}/plots/water_path")
-
-TIME = _vars["time"]
-ALTITUDE = _vars["altitude"]
-LWP = "LWP"
-WVP = "WVP"
+PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v.dataset}/plots/water_path")
 
 
 def plot_water_path(flight: str, start_pt: int, end_pt: int):
     os.makedirs(PLOTS_DIR, exist_ok=True)
     fs = load_flight_segments(flight)
 
-    with open_dataset(DATASET, flight) as ds:
-        times = ds[TIME].values
-        lwp = ds[LWP].values
-        wvp = ds[WVP].values
-        alt = ds[ALTITUDE].values
+    with open_dataset(v.dataset, flight) as ds:
+        times = ds[v.time].values
+        lwp = ds[v.lwp].values
+        wvp = ds[v.wvp].values
+        alt = ds[v.altitude].values
 
     s = fs.segment_slice(start_pt, end_pt)
     times, lwp, wvp, alt = times[s], lwp[s], wvp[s], alt[s]
@@ -60,20 +55,6 @@ def plot_water_path(flight: str, start_pt: int, end_pt: int):
     plt.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close()
     print(f"Saved: {out_path}")
-
-
-# NB: must change if segmentation strategy changes
-LOW_LEVEL_LEGS = {
-    "RF01": [(14, 15), (19, 20)],
-    "RF02": [(13, 15), (19, 20), (25, 26)],
-    "RF03": [(13, 14)],
-    "RF04": [(8, 9)],
-    "RF05": [(10, 11), (16, 17)],
-    "RF06": [(21, 22)],
-    "RF07": [(8, 9), (14, 15)],
-    "RF09": [(35, 36)],
-    "RF10": [(64, 65), (69, 70)],
-}
 
 
 def main():

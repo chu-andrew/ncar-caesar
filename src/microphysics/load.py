@@ -7,9 +7,10 @@ import xarray as xr
 
 from ds_638_038.load import load_gvr_segment
 from ds_638_038.segments import load_flight_segments
-from ds_638_038.water_path import LOW_LEVEL_LEGS
-from nc.flights import FLIGHTS
-from nc.loader import PROJECT_ROOT, DATASET_VARS, open_dataset
+from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
+from nc.loader import PROJECT_ROOT
+from nc.time import seconds_to_datetime64
+from nc.vars import MICROPHYSICS as vm
 
 # cloud-phase flags
 PHASE_CLEAR = 0
@@ -18,26 +19,16 @@ PHASE_MIXED = 2
 PHASE_LIQUID = 3
 PHASE_DRIZZLE = 4
 
-MICRO_DATASET_DIR = os.path.join(PROJECT_ROOT, "data", "microphysics_beta", "data")
-
-# GVR dataset variable names
-_vars_038 = DATASET_VARS["638-038"]
-TIME_038 = _vars_038["time"]
-ALT_038 = _vars_038["altitude"]
+MICROPHYSICS_DATASET_DIR = os.path.join(
+    PROJECT_ROOT, "data", "microphysics_beta", "data"
+)
 
 
 def _open_micro(flight: str) -> xr.Dataset:
-    path = os.path.join(MICRO_DATASET_DIR, f"{flight}_microphysics_beta.nc")
+    path = os.path.join(MICROPHYSICS_DATASET_DIR, f"{flight}_microphysics_beta.nc")
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Microphysics file not found: {path}")
     return xr.open_dataset(path)
-
-
-def _seconds_to_datetime64(seconds: np.ndarray, flight_date: str) -> np.ndarray:
-    """Convert seconds-from-midnight to datetime64[ns] given a date string."""
-    base = np.datetime64(flight_date, "ns")
-    ns_per_sec = np.int64(1_000_000_000)
-    return base + (seconds * ns_per_sec).astype("timedelta64[ns]")
 
 
 def load_microphysics_segment(
@@ -65,10 +56,10 @@ def load_microphysics_segment(
     # load microphysics
     ds = _open_micro(flight)
     try:
-        micro_time = ds["time"].values  # seconds from midnight
-        cloud_phase = ds["cloud_phase"].values  # (time,)
-        conc = ds["concentration"].values  # (bin_centers, time), #/m^4
-        bin_edges_um = ds["bin_edges"].values  # um, (170,)
+        micro_time = ds[vm.time].values  # seconds from midnight
+        cloud_phase = ds[vm.cloud_phase].values  # (time,)
+        conc = ds[vm.concentration].values  # (bin_centers, time), #/m^4
+        bin_edges_um = ds[vm.bin_edges].values  # um, (170,)
     finally:
         ds.close()
 
@@ -93,7 +84,7 @@ def load_microphysics_segment(
     bin_centers_um = (bin_edges_um[:-1] + bin_edges_um[1:]) / 2
     bin_widths_um = np.diff(bin_edges_um)
 
-    times_dt = _seconds_to_datetime64(t_sel, flight_date)
+    times_dt = seconds_to_datetime64(t_sel, flight_date)
 
     return times_dt, c_sel, bin_centers_um, bin_widths_um
 

@@ -5,8 +5,7 @@ import numpy as np
 
 from nc.flights import FLIGHTS
 from nc.loader import DATA_DIR
-
-DATASET = "638-052"
+from nc.vars import DS_638_052 as v
 
 
 def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
@@ -16,7 +15,7 @@ def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
     import xarray as xr
 
     date_str = FLIGHTS[flight].replace("-", "")
-    path = os.path.join(DATA_DIR, DATASET, "data")
+    path = os.path.join(DATA_DIR, v.dataset, "data")
     pattern = os.path.join(path, f"RSmerged.{date_str}_*_L3_CAESAR.nc")
     files = sorted(glob.glob(pattern))
 
@@ -29,16 +28,14 @@ def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
     for f in files:
         ds = xr.open_dataset(f)
         try:
-            t = ds["time"].values  # datetime64[ns]
-            cb = ds["cloudbase_WCL"].values  # meters, float32
+            t = ds[v.time].values  # datetime64[ns]
+            cb = ds[v.cloud_base].values  # meters, float32
         finally:
             ds.close()
 
         # convert datetime64 to fractional hours UTC
-        ns_since_midnight = (
-            (t - t.astype("datetime64[D]")).astype("timedelta64[ns]").astype(np.float64)
-        )
-        hours = ns_since_midnight / 3.6e12
+        midnight = t.astype("datetime64[D]")
+        hours = (t - midnight) / np.timedelta64(1, "h")
 
         all_time.append(hours)
         all_cb.append(cb.astype(np.float64))
