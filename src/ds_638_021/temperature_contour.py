@@ -4,13 +4,37 @@ from nc.flights import MARLI_FILES
 from nc.loader import open_dataset
 from nc.vars import DS_638_021 as v
 
-from ds_638_021.potential_temperature import (
-    P_850,
-    find_nearest_pressure_bin,
-    height_to_pressure,
-    mask_temperature_outliers,
-)
-from nc.units import celsius_to_kelvin, wvmr_to_specific_humidity
+from ds_638_021.potential_temperature import compute_theta_850
+
+
+def mask_temperature_outliers(T: np.ndarray) -> np.ndarray:
+    """
+    Mask outlier temperatures using per-level median absolute deviation.
+    """
+
+    MAD_MULT = 5.0  # multiplier for MAD
+
+    T = T.astype(np.float64, copy=True)
+    T[(T >= v.fill_value) | (T < -100) | (T > 100)] = np.nan
+
+    if T.ndim == 1:
+        T = T[:, np.newaxis]
+        squeeze = True
+    else:
+        squeeze = False
+
+    for j in range(T.shape[1]):
+        col = T[:, j]
+        valid = col[~np.isnan(col)]
+        if len(valid) < 3:
+            continue
+        median = np.median(valid)
+        mad = np.median(np.abs(valid - median))
+        if mad == 0:
+            continue
+        T[np.abs(col - median) > MAD_MULT * mad, j] = np.nan
+
+    return T[:, 0] if squeeze else T
 
 
 def load_contour_data(flight: str) -> dict:
@@ -22,20 +46,17 @@ def load_contour_data(flight: str) -> dict:
 
     all_time = []
     all_T = []
-    all_WVMR = []
     all_alt = []
 
     for filename in filenames:
         with open_dataset(v.dataset, filename) as ds:
             h_file = ds["H"].values
             t_data = ds["T"].values.astype(np.float64)
-            wvmr_data = ds[v.wvmr].values.astype(np.float64)
             all_time.append(ds[v.time].values)
             all_alt.append(ds[v.altitude].values)
 
             if h_file.shape[0] == H.shape[0]:
                 all_T.append(t_data)
-                all_WVMR.append(wvmr_data)
             else:
                 # interpolate from file's height grid (h_file) to reference grid (H)
                 all_T.append(
@@ -46,30 +67,18 @@ def load_contour_data(flight: str) -> dict:
                         ]
                     )
                 )
-                all_WVMR.append(
-                    np.array(
-                        [
-                            np.interp(H, h_file, wvmr_data[i])
-                            for i in range(wvmr_data.shape[0])
-                        ]
-                    )
-                )
 
     T = mask_temperature_outliers(np.concatenate(all_T, axis=0))
-    WVMR = np.concatenate(all_WVMR, axis=0)
-    WVMR[WVMR >= v.fill_value] = np.nan
 
-    # precompute 850 hPa height using virtual temperature
-    p_levels = height_to_pressure(
-        H, celsius_to_kelvin(T), wvmr_to_specific_humidity(WVMR)
-    )
-    idx_850, _ = find_nearest_pressure_bin(p_levels, P_850, H)
+    # compute h_850 from in-situ vertical leg measurements
+    theta_legs = compute_theta_850(flight)
+    h_850_values = [leg["h_850"] for leg in theta_legs.values()]
+    h_850 = float(np.mean(h_850_values)) if h_850_values else float("nan")
 
     return {
         "H": H,
         "time": np.concatenate(all_time),
         "T": T,
-        "WVMR": WVMR,
         "alt": np.concatenate(all_alt),
-        "h_850": float(H[idx_850]),
+        "h_850": h_850,
     }

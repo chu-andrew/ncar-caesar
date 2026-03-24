@@ -1,248 +1,93 @@
 import numpy as np
+import polars as pl
 
-import metpy.calc as mpcalc
-import metpy.constants as mpconst
-from metpy.units import units as munits
-
-from nc.flights import MARLI_FILES
+from nc.flights import VERTICAL_LEGS
 from nc.loader import open_dataset
-from nc.units import M_PER_KM, celsius_to_kelvin, wvmr_to_specific_humidity
-from nc.vars import DS_638_021 as v
+from nc.units import M_PER_KM
+from nc.vars import DS_638_001 as v001
 
 P_850 = 850  # hPa
 
-MAD_K = 5.0  # multiplier for MAD
-TEMPORAL_RESOLUTION = 30  # seconds
 
-
-def mask_temperature_outliers(T: np.ndarray, k: float = MAD_K) -> np.ndarray:
+def compute_theta_850(flight: str) -> dict:
     """
-    Mask outlier temperatures using per-level median absolute deviation.
+    Compute theta_850 from in-situ vertical legs adjacent to each low-level leg.
+
+    For each low-level leg, extracts the descent leg before and ascent leg after,
+    smooths theta over 10 seconds, finds the point closest to 850 hPa, and
+    returns the mean theta and altitude from both legs.
+
+    Returns dict keyed by (low_start, low_end) with:
+      theta_850     : mean potential temperature at ~850 hPa (K)
+      h_850         : mean altitude of ~850 hPa level (km)
+      theta_850_std : std between descent and ascent values (K)
+      leg_thetas    : individual theta values [descent, ascent]
+      leg_times     : datetime64 timestamps of each measurement
     """
+    from ds_638_038.segments import load_flight_segments
 
-    T = T.astype(np.float64, copy=True)
-    T[(T >= v.fill_value) | (T < -100) | (T > 100)] = np.nan
+    segments = load_flight_segments(flight)
 
-    if T.ndim == 1:
-        T = T[:, np.newaxis]
-        squeeze = True
-    else:
-        squeeze = False
-
-    for j in range(T.shape[1]):
-        col = T[:, j]
-        valid = col[~np.isnan(col)]
-        if len(valid) < 3:
-            continue
-        median = np.median(valid)
-        mad = np.median(np.abs(valid - median))
-        if mad == 0:
-            continue
-        else:
-            T[np.abs(col - median) > k * mad, j] = np.nan
-
-    return T[:, 0] if squeeze else T
-
-
-def height_to_pressure(
-    H_km: np.ndarray,
-    T_K: np.ndarray,
-    q: np.ndarray,
-) -> np.ndarray:
-    P_SEA = 1013.25  # hPa
-
-    G = mpconst.g.magnitude  # m / s^2
-    RD = mpconst.Rd.magnitude  # J / (kg K)
-
-    Tv = T_K * (1.0 + 0.61 * q)
-    H_m = H_km * M_PER_KM
-    return P_SEA * np.exp(-G * H_m[np.newaxis, :] / (RD * Tv))
-
-
-def find_nearest_pressure_bin(
-    p_levels: np.ndarray, target_hpa: float, H: np.ndarray
-) -> tuple[int, np.ndarray]:
-    """
-    Find the altitude bin closest to a target pressure level.
-
-    Returns (idx, p_mean) where p_mean is the time-averaged pressure profile.
-    """
-    valid_bins = np.any(np.isfinite(p_levels), axis=0)
-    p_mean = np.full(H.shape, np.inf)
-    p_mean[valid_bins] = np.nanmean(p_levels[:, valid_bins], axis=0)
-    return int(np.argmin(np.abs(p_mean - target_hpa))), p_mean
-
-
-def potential_temperature(
-    t_celsius: np.ndarray, p_hpa: np.ndarray | float
-) -> np.ndarray:
-    """Potential temperature from temperature (degC) and pressure (hPa)."""
-    T = t_celsius * munits.degC
-    P = p_hpa * munits.hPa
-    return mpcalc.potential_temperature(P, T).to("kelvin").magnitude
-
-
-def _extract_theta_850(ds) -> tuple[np.ndarray, np.ndarray, float, float]:
-    H = ds["H"].values  # bin heights (MSL), km, shape (n_bins,)
-    T = ds["T"].values  # atmospheric temperature, degC, shape (n_times, n_bins)
-    WVMR = ds["WVMR"].values  # water vapor mixing ratio, g/kg, shape (n_times, n_bins)
-    time = ds["time"].values
-
-    T_K = celsius_to_kelvin(T)
-    WVMR[WVMR >= v.fill_value] = np.nan
-    q = wvmr_to_specific_humidity(WVMR)
-
-    p_levels = height_to_pressure(H, T_K, q)
-    idx, p_mean = find_nearest_pressure_bin(p_levels, P_850, H)
-    h_actual = float(H[idx])
-    p_actual = float(p_mean[idx])
-
-    # extract temperature and per-time-step pressure at that level
-    t_at_level = mask_temperature_outliers(T[:, idx])
-    p_at_level = p_levels[:, idx]
-
-    theta = potential_temperature(t_at_level, p_at_level)
-    return time, theta, h_actual, p_actual
-
-
-def regrid_timeseries(
-    time_hours: np.ndarray,
-    data: np.ndarray,
-    dt_seconds: float,
-) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Regrid time series to uniform temporal resolution (of dt_seconds) using block averaging.
-    """
-    dt_hours = dt_seconds / 3600.0
-
-    # create uniform grid from min to max time
-    t_min = np.nanmin(time_hours)
-    t_max = np.nanmax(time_hours)
-    time_edges = np.arange(t_min, t_max + dt_hours, dt_hours)
-    time_regrid = time_edges[:-1] + dt_hours / 2  # bin centers
-
-    # bin data and compute mean in each bin
-    data_regrid = np.full(len(time_regrid), np.nan)
-    for i in range(len(time_regrid)):
-        mask = (time_hours >= time_edges[i]) & (time_hours < time_edges[i + 1])
-        bin_data = data[mask]
-        valid_data = bin_data[~np.isnan(bin_data)]
-
-        if len(valid_data) > 0:
-            data_regrid[i] = np.mean(valid_data)
-
-    return time_regrid, data_regrid
-
-
-def find_gaps(mask: np.ndarray) -> list[tuple[int, int]]:
-    """
-    Find contiguous regions of True values in a boolean mask.
-
-    Returns list of (start, end) indices for each gap.
-    """
-    gaps = []
-    in_gap = False
-    gap_start = 0
-
-    for i, is_missing in enumerate(mask):
-        if is_missing and not in_gap:
-            gap_start = i
-            in_gap = True
-        elif not is_missing and in_gap:
-            gaps.append((gap_start, i))
-            in_gap = False
-
-    if in_gap:
-        gaps.append((gap_start, len(mask)))
-
-    return gaps
-
-
-def interpolate_gaps(
-    data: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Fill interior gaps using the mean of the two boundary endpoints.
-
-    Returns:
-        data_filled: array with interior gaps filled (constant per gap)
-        is_interpolated: boolean mask indicating which points were filled
-        interp_std: std of the two boundary endpoints (NaN where not interpolated)
-    """
-    missing = np.isnan(data)
-    data_filled = data.copy()
-    interp_std = np.full_like(data, np.nan)
-    valid = ~missing
-
-    if np.sum(valid) < 2:
-        return data, missing, interp_std
-
-    gaps = find_gaps(missing)
-    is_interpolated = np.zeros_like(data, dtype=bool)
-
-    for gap_start, gap_end in gaps:
-        # only fill interior gaps (valid data on both sides)
-        if not np.any(valid[:gap_start]) or not np.any(valid[gap_end:]):
-            continue
-
-        # endpoints: last valid before gap and first valid after gap
-        y_before = data[np.where(valid[:gap_start])[0][-1]]
-        y_after = data[gap_end + np.argmax(valid[gap_end:])]
-
-        gap_mean = (y_before + y_after) / 2.0
-        gap_std = np.std([y_before, y_after])
-
-        data_filled[gap_start:gap_end] = gap_mean
-        is_interpolated[gap_start:gap_end] = True
-        interp_std[gap_start:gap_end] = gap_std
-
-    return data_filled, is_interpolated, interp_std
-
-
-def compute_theta_850(flight: str, interpolate: bool = True) -> dict:
-    filenames = MARLI_FILES[flight]
-
-    all_time = []
-    all_theta = []
-    all_alt = []
-    h_actual = None
-    p_actual = None
-
-    for filename in filenames:
-        with open_dataset(v.dataset, filename) as ds:
-            time, theta, h, p = _extract_theta_850(ds)
-            all_alt.append(ds[v.altitude].values)
-        all_time.append(time)
-        all_theta.append(theta)
-        if h_actual is None:
-            h_actual = h
-            p_actual = p
-
-    time_hours_native = np.concatenate(all_time)
-    theta_850_native = np.concatenate(all_theta)
-    altitude_native = np.concatenate(all_alt)
-
-    time_hours_regrid, theta_850_regrid = regrid_timeseries(
-        time_hours_native, theta_850_native, TEMPORAL_RESOLUTION
+    SMOOTH_WINDOW = 10  # seconds (data is 1 Hz, so 10 points)
+    P_TOLERANCE = (
+        50  # hPa: skip legs that are always more than P_TOLERANCE away from P_850
     )
 
-    # interpolate gaps if requested
-    if interpolate:
-        theta_850_filled, is_interpolated, interp_std = interpolate_gaps(
-            theta_850_regrid
+    with open_dataset(v001.dataset, flight) as ds:
+        df = pl.DataFrame(
+            {
+                "time": ds[v001.time].values,
+                "theta": ds[v001.theta].values.astype(np.float64),
+                "pressure": ds[v001.pressure].values.astype(np.float64),
+                "alt_km": ds[v001.altitude].values.astype(np.float64) / M_PER_KM,
+            }
         )
-    else:
-        theta_850_filled = theta_850_regrid
-        is_interpolated = np.zeros_like(theta_850_regrid, dtype=bool)
-        interp_std = np.full_like(theta_850_regrid, np.nan)
 
-    return {
-        "time_utc_hours": time_hours_native,
-        "theta_850": theta_850_filled,
-        "time_regrid_utc_hours": time_hours_regrid,
-        "altitude": altitude_native,
-        "h_850": h_actual,
-        "p_850": p_actual,
-        "is_interpolated": is_interpolated,
-        "theta_850_std": interp_std,
-    }
+    results = {}
+
+    for low_level_leg, (descent_leg, ascent_leg) in VERTICAL_LEGS[flight].items():
+        leg_thetas = []
+        leg_alts = []
+        leg_times = []
+
+        for leg_start, leg_end in [descent_leg, ascent_leg]:
+            seg_times = segments.segment_times(leg_start, leg_end)
+            t_start, t_end = seg_times[0], seg_times[-1]
+
+            leg_df = df.filter((pl.col("time") >= t_start) & (pl.col("time") <= t_end))
+            if leg_df.height < SMOOTH_WINDOW:
+                continue
+
+            leg_df = (
+                leg_df.with_columns(
+                    pl.col("theta")
+                    .rolling_mean(window_size=SMOOTH_WINDOW, center=True)
+                    .fill_null(strategy="backward")
+                    .fill_null(strategy="forward")
+                    .alias("theta_smooth"),
+                    (pl.col("pressure") - P_850).abs().alias("p_diff"),
+                )
+                .filter(pl.col("p_diff") <= P_TOLERANCE)
+                .sort("p_diff")
+            )
+
+            if leg_df.height == 0:
+                continue
+
+            best = leg_df.row(0, named=True)
+            leg_thetas.append(best["theta_smooth"])
+            leg_alts.append(best["alt_km"])
+            leg_times.append(best["time"])
+
+        if leg_thetas:
+            results[low_level_leg] = {
+                "theta_850": float(np.mean(leg_thetas)),
+                "h_850": float(np.mean(leg_alts)),
+                "theta_850_std": float(np.std(leg_thetas))
+                if len(leg_thetas) > 1
+                else np.nan,
+                "leg_thetas": leg_thetas,
+                "leg_times": leg_times,
+            }
+
+    return results
