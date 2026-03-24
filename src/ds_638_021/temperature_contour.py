@@ -4,8 +4,6 @@ from nc.flights import MARLI_FILES
 from nc.loader import open_dataset
 from nc.vars import DS_638_021 as v
 
-from ds_638_021.potential_temperature import compute_theta_850
-
 
 def mask_temperature_outliers(T: np.ndarray) -> np.ndarray:
     """
@@ -70,15 +68,9 @@ def load_contour_data(flight: str) -> dict:
 
     T = mask_temperature_outliers(np.concatenate(all_T, axis=0))
 
-    # compute h_850 from in-situ vertical leg measurements
-    theta_legs = compute_theta_850(flight)
-    h_850_values = [leg["h_850"] for leg in theta_legs.values()]
-    h_850 = float(np.mean(h_850_values)) if h_850_values else float("nan")
-
     return {
         "H": H,
         "time": np.concatenate(all_time),
         "T": T,
         "alt": np.concatenate(all_alt),
-        "h_850": h_850,
     }

@@ -29,15 +29,6 @@ def plot_temperature_contour(flight: str, data: dict, vmin: float, vmax: float) 
         plt.FuncFormatter(lambda h, _: f"{int(h):02d}:{int((h % 1) * 60):02d}")
     )
 
-    h_850 = data["h_850"]
-    ax.axhline(
-        h_850,
-        color="black",
-        linestyle="--",
-        linewidth=1.5,
-        label=f"~850 hPa (H={h_850:.3f} km)",
-    )
-
     ax.plot(time, alt, color="black", linewidth=1.5, label="Aircraft altitude")
 
     cb_time, cb_height = load_cloud_base(flight)
