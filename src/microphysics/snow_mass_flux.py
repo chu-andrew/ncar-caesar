@@ -132,7 +132,7 @@ def build_flux_dataset() -> pl.DataFrame:
 
     # join VMR_VXL and altitude from 638-001 per flight
     print("Loading VMR_VXL and altitude from in-situ data...")
-    flights = df["flight"].unique().to_list()
+    flights = df["flight"].unique().sort().to_list()
     frames = []
     for flight in flights:
         df_flight = df.filter(pl.col("flight") == flight)
