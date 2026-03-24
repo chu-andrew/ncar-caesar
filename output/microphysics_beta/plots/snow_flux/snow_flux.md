@@ -36,6 +36,10 @@ Note: All plots here are limited to low-level legs.
 
 ![](pe_vs_mcao_hexbin_by_altitude.png)
 
+## Raw Variables vs MCAO Hexbin by Altitude
+
+![](raw_vs_mcao_hexbin_by_altitude.png)
+
 ## Precipitation Efficiency Maps
 
 | Variable    | Map                            |

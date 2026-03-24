@@ -412,6 +412,83 @@ def plot_pe_vs_mcao_hexbin(
     return output_path
 
 
+def plot_raw_vs_mcao_hexbin(
+    df: pl.DataFrame,
+    output_path: str,
+    n_alt_bins: int = 4,
+) -> str:
+    """2D hexbin of log(raw variable) vs MCAO by altitude bin for S, LWP, WVP, VMR_VXL."""
+    raw_configs = [
+        ("S", r"ln(S) (kg m$^{-2}$ s$^{-1}$)", "S"),
+        ("LWP", r"ln(LWP) (g m$^{-2}$)", "LWP"),
+        ("WVP", r"ln(WVP) (g m$^{-2}$)", "WVP"),
+        ("VMR_VXL", r"ln(VMR_VXL) (ppmv)", "VMR_VXL"),
+    ]
+
+    df_base = df.filter(
+        pl.col("MCAO").is_not_null()
+        & ~pl.col("MCAO").is_nan()
+        & pl.col("alt_insitu").is_not_null()
+        & ~pl.col("alt_insitu").is_nan()
+    )
+    df_base, bin_edges, bin_labels = _altitude_bins(df_base, n_alt_bins)
+    actual_n_bins = len(bin_edges) - 1
+
+    n_rows = len(raw_configs)
+    n_cols = actual_n_bins
+    fig, axes = plt.subplots(
+        n_rows, n_cols, figsize=(4.5 * n_cols, 4 * n_rows), squeeze=False
+    )
+
+    all_hb_objects = {}
+
+    for row, (col_name, ylabel, label) in enumerate(raw_configs):
+        df_raw = df_base.filter(
+            pl.col(col_name).is_not_null() & (pl.col(col_name) > 0)
+        ).with_columns(pl.col(col_name).log().alias("log_raw"))
+
+        for col in range(actual_n_bins):
+            ax = axes[row, col]
+            df_bin = df_raw.filter(pl.col("alt_bin") == col)
+            n = len(df_bin)
+
+            hb = ax.hexbin(
+                df_bin["MCAO"].to_numpy(),
+                df_bin["log_raw"].to_numpy(),
+                gridsize=30,
+                cmap="inferno",
+                mincnt=1,
+            )
+            all_hb_objects[(row, col)] = (hb, ax, n)
+            ax.grid(True, alpha=0.2, color="white")
+
+            if row == 0:
+                ax.set_title(f"{bin_labels[col]}\n(n={n})", fontsize=11)
+            else:
+                ax.set_title(f"n={n}", fontsize=10)
+
+            if row == n_rows - 1:
+                ax.set_xlabel("MCAO (K)", fontsize=11)
+
+            if col == 0:
+                ax.set_ylabel(ylabel, fontsize=10)
+
+    if all_hb_objects:
+        global_vmax = max(hb.get_array().max() for hb, _, _ in all_hb_objects.values())
+        for hb, _, _ in all_hb_objects.values():
+            hb.set_clim(1, global_vmax)
+
+        last_hb = all_hb_objects[max(all_hb_objects)][0]
+        fig.subplots_adjust(right=0.88, top=0.93)
+        cbar_ax = fig.add_axes([0.90, 0.1, 0.02, 0.8])
+        fig.colorbar(last_hb, cax=cbar_ax, label="count")
+
+    fig.suptitle(r"$\ln$(raw variables) vs MCAO by altitude bin", fontsize=14)
+    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
 def _altitude_bins(df: pl.DataFrame, n_bins: int):
     quantile_pts = np.linspace(0, 1, n_bins + 1)
     bin_edges = np.unique(np.quantile(df["alt_insitu"].to_numpy(), quantile_pts))
@@ -540,6 +617,10 @@ def main():
     out_hexbin = os.path.join(PLOTS_DIR, "pe_vs_mcao_hexbin_by_altitude.png")
     plot_pe_vs_mcao_hexbin(df, out_hexbin)
     print(f"Saved: {out_hexbin}")
+
+    out_raw_hexbin = os.path.join(PLOTS_DIR, "raw_vs_mcao_hexbin_by_altitude.png")
+    plot_raw_vs_mcao_hexbin(df, out_raw_hexbin)
+    print(f"Saved: {out_raw_hexbin}")
 
     out_kde = os.path.join(PLOTS_DIR, "kde_by_altitude.png")
     plot_kde_by_altitude_bin(df, out_kde)
