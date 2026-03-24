@@ -1,0 +1,6 @@
+variable,long_name,units
+lat_bnds,"",""
+sst,Sea surface temperature,K
+valid_time,time,months since 1979-1-1 00:00:00
+lon,longitude,degrees_east
+lat,latitude,degrees_north

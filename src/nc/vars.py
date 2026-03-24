@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from nc.remote import SWING3_DATA
+
 
 @dataclass(frozen=True)
 class _Ds638001Vars:
@@ -49,8 +51,32 @@ class _MicrophysicsVars:
     bin_edges: str = "bin_edges"
 
 
+@dataclass(frozen=True)
+class _Swing3SSTVars:
+    time: str = "valid_time"
+    sst: str = "sst"
+    lat: str = "lat"
+    lon: str = "lon"
+
+
+@dataclass(frozen=True)
+class _Swing3Vars:
+    time: str = "time"
+    temperature: str = "t"
+    pressure: str = "p"
+    precip_efficiency: str = "pref"
+
+
+@dataclass(frozen=True)
+class _Swing3LMDZVars:
+    time: str = "time_counter"  # LMDZ uses a non-standard time dimension name
+
+
 DS_638_001 = _Ds638001Vars()
 DS_638_021 = _Ds638021Vars()
 DS_638_038 = _Ds638038Vars()
 DS_638_052 = _Ds638052Vars()
 MICROPHYSICS = _MicrophysicsVars()
+SWING3_SST = _Swing3SSTVars()
+SWING3 = _Swing3Vars()
+SWING3_LMDZ = _Swing3LMDZVars()
