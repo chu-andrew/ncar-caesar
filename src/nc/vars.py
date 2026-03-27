@@ -65,6 +65,8 @@ class _Swing3Vars:
     temperature: str = "t"
     pressure: str = "p"
     precip_efficiency: str = "pref"
+    lat: str = "lat"
+    lon: str = "lon"
 
 
 @dataclass(frozen=True)
