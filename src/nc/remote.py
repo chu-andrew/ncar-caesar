@@ -22,5 +22,5 @@ SWING3_MODELS = {
     "LMDZ": SWING3_DATA
     / "Total.LMDZ_Monthly.nc",  # uses "time_counter" instead of "time"
     "MIROC": SWING3_DATA / "Total.MIROC_Monthly.nc",
-    "NICAM": SWING3_DATA / "Total.NICAM_Monthly.nc",
+    # "NICAM": SWING3_DATA / "Total.NICAM_Monthly.nc", # omitted
 }
