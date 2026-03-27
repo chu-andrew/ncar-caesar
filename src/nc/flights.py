@@ -1,4 +1,10 @@
-"""Centralized flight-to-date mapping and MARLi filename resolution."""
+# reference: https://data.eol.ucar.edu/project/CAESAR
+CAESAR_BOUNDS = {
+    "MIN_LAT": 66,
+    "MAX_LAT": 82,
+    "MIN_LON": -14,
+    "MAX_LON": 24,
+}
 
 FLIGHTS = {
     "RF01": "2024-02-28",

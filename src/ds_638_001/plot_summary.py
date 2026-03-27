@@ -8,16 +8,11 @@ import seaborn as sns
 
 from ds_638_001.summary import construct_df
 from nc.flights import FLIGHTS
+from nc.flights import CAESAR_BOUNDS as bounds
 from nc.loader import PROJECT_ROOT, open_dataset
 from nc.vars import DS_638_001 as v001
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, f"output/{v001.dataset}/plots/summary")
-
-# configured by feel (reference: https://data.eol.ucar.edu/project/CAESAR)
-MIN_LAT = -15
-MAX_LAT = 25
-MIN_LON = 65
-MAX_LON = 80
 
 
 def plot_altitude(df: pl.DataFrame, ax: plt.Axes, flight_label: str) -> None:
@@ -40,8 +35,10 @@ def setup_map(ax: plt.Axes) -> None:
     gl.top_labels = False
     gl.right_labels = False
 
-    # NB: hardcoded boundaries
-    ax.set_extent([MIN_LAT, MAX_LAT, MIN_LON, MAX_LON], crs=ccrs.PlateCarree())
+    ax.set_extent(
+        [bounds["MIN_LON"], bounds["MAX_LON"], bounds["MIN_LAT"], bounds["MAX_LAT"]],
+        crs=ccrs.PlateCarree(),
+    )
     ax.set_aspect("auto")
 
 
@@ -84,8 +81,8 @@ def main():
 
     # all flights map
     map_proj = ccrs.LambertConformal(
-        central_longitude=((MAX_LAT + MIN_LAT) / 2),
-        central_latitude=((MAX_LAT + MIN_LAT) / 2),
+        central_longitude=((bounds["MAX_LON"] + bounds["MIN_LON"]) / 2),
+        central_latitude=((bounds["MAX_LAT"] + bounds["MIN_LAT"]) / 2),
     )
     fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot(1, 1, 1, projection=map_proj)
