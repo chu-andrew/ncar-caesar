@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 from rdp import rdp
 
+from nc.cache import MEMORY
 from nc.loader import open_dataset
 from nc.units import m_to_km
 from nc.vars import DS_638_038 as v
@@ -60,6 +61,7 @@ def find_inflection_points(series: np.ndarray, epsilon: float) -> np.ndarray:
     return rdp(points, epsilon=epsilon, return_mask=True)
 
 
+@MEMORY.cache
 def load_flight_segments(flight: str, epsilon: float = None) -> FlightSegments:
     """Load flight data and compute RDP inflection points.
 

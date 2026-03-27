@@ -3,11 +3,13 @@ import os
 
 import numpy as np
 
+from nc.cache import MEMORY
 from nc.flights import FLIGHTS
 from nc.loader import DATA_DIR
 from nc.vars import DS_638_052 as v
 
 
+@MEMORY.cache
 def load_cloud_base(flight: str) -> tuple[np.ndarray, np.ndarray]:
     """
     Load cloud base height, in meters, for a flight.

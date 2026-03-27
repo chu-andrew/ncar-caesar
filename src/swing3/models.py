@@ -4,6 +4,7 @@ import pandas as pd
 import xarray as xr
 from metpy.units import units as munits
 
+from nc.cache import MEMORY
 from nc.flights import CAESAR_BOUNDS as bounds
 from nc.loader import open_file
 from nc.remote import SWING3_MODELS
@@ -23,6 +24,7 @@ def jfma_indices(n_times: int) -> np.ndarray:
     return np.where(dates.month.isin(JFMA))[0]
 
 
+@MEMORY.cache
 def _load_model_data(
     model: str, sst_da: xr.DataArray
 ) -> tuple[xr.DataArray, xr.DataArray, str]:

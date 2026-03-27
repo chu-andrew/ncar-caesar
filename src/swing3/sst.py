@@ -1,11 +1,13 @@
 import pandas as pd
 import xarray as xr
 
+from nc.cache import MEMORY
 from nc.loader import open_file
 from nc.remote import ERA5_SST
 from nc.vars import SWING3_SST as v
 
 
+@MEMORY.cache
 def load_sst() -> xr.DataArray:
     with open_file(ERA5_SST, decode_times=False) as ds:
         sst = ds[v.sst].load()

@@ -1,5 +1,6 @@
 import numpy as np
 
+from nc.cache import MEMORY
 from nc.flights import MARLI_FILES
 from nc.loader import open_dataset
 from nc.vars import DS_638_021 as v
@@ -35,6 +36,7 @@ def mask_temperature_outliers(T: np.ndarray) -> np.ndarray:
     return T[:, 0] if squeeze else T
 
 
+@MEMORY.cache
 def load_contour_data(flight: str) -> dict:
     filenames = MARLI_FILES[flight]
 

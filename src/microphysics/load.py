@@ -7,6 +7,7 @@ import xarray as xr
 
 from ds_638_038.load import load_gvr_segment
 from ds_638_038.segments import load_flight_segments
+from nc.cache import MEMORY
 from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
 from nc.loader import PROJECT_ROOT
 from nc.time import seconds_to_datetime64
@@ -31,6 +32,7 @@ def _open_micro(flight: str) -> xr.Dataset:
     return xr.open_dataset(path)
 
 
+@MEMORY.cache
 def load_microphysics_segment(
     flight: str, start_pt: int, end_pt: int, phase_filter: frozenset[int]
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -89,6 +91,7 @@ def load_microphysics_segment(
     return times_dt, c_sel, bin_centers_um, bin_widths_um
 
 
+@MEMORY.cache
 def build_low_level_dataset(
     phase_filter: frozenset[int] = frozenset({PHASE_ICE}),
 ) -> pl.DataFrame:

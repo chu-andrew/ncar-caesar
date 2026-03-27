@@ -8,6 +8,7 @@ SST from RSTB, theta_850 from in-situ vertical legs.
 import numpy as np
 import polars as pl
 
+from nc.cache import MEMORY
 from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
 from nc.loader import open_dataset
 from nc.units import ZERO_CELSIUS_IN_KELVIN
@@ -17,6 +18,7 @@ from ds_638_021.potential_temperature import compute_theta_850
 from ds_638_038.load import load_gvr_segment
 
 
+@MEMORY.cache
 def load_rstb(flight: str) -> pl.DataFrame:
     """
     Load radiometric surface temperature (RSTB) from 638-001.
@@ -76,6 +78,7 @@ def merge_flight_segment(
     return df
 
 
+@MEMORY.cache
 def build_merged_dataset() -> pl.DataFrame:
     """Build the full merged dataset across all flights and segments."""
     frames = []

@@ -1,6 +1,7 @@
 import numpy as np
 import polars as pl
 
+from nc.cache import MEMORY
 from nc.flights import VERTICAL_LEGS
 from nc.loader import open_dataset
 from nc.units import M_PER_KM
@@ -9,6 +10,7 @@ from nc.vars import DS_638_001 as v001
 P_850 = 850  # hPa
 
 
+@MEMORY.cache
 def compute_theta_850(flight: str) -> dict:
     """
     Compute theta_850 from in-situ vertical legs adjacent to each low-level leg.

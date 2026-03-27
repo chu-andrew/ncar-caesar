@@ -8,6 +8,7 @@ import polars as pl
 
 from ds_638_021.mcao import build_merged_dataset
 from microphysics.load import build_low_level_dataset, PHASE_ICE
+from nc.cache import MEMORY
 from nc.loader import open_dataset
 from nc.units import um_to_m, S_PER_HR, KG_PER_G
 from nc.vars import DS_638_001 as v001
@@ -56,6 +57,7 @@ def compute_snow_mass_flux(
     return S
 
 
+@MEMORY.cache
 def load_insitu_ancillary(flight: str) -> pl.DataFrame:
     """Load VMR_VXL, altitude, latitude, and longitude from 638-001 for a flight."""
     with open_dataset(v001.dataset, flight) as ds:
@@ -99,6 +101,7 @@ def filter_legs(
     )
 
 
+@MEMORY.cache
 def build_flux_dataset() -> pl.DataFrame:
     """Build dataset with snow mass flux and MCAO for all low-level legs."""
     print("Loading microphysics data...")
