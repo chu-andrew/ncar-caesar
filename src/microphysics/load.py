@@ -3,13 +3,12 @@ from typing import Tuple
 
 import numpy as np
 import polars as pl
-import xarray as xr
 
 from ds_638_038.load import load_gvr_segment
 from ds_638_038.segments import load_flight_segments
 from nc.cache import MEMORY
 from nc.flights import FLIGHTS, LOW_LEVEL_LEGS
-from nc.loader import PROJECT_ROOT
+from nc.loader import PROJECT_ROOT, open_file
 from nc.time import seconds_to_datetime64
 from nc.vars import MICROPHYSICS as vm
 
@@ -25,11 +24,11 @@ MICROPHYSICS_DATASET_DIR = os.path.join(
 )
 
 
-def _open_micro(flight: str) -> xr.Dataset:
+def _open_micro(flight: str):
     path = os.path.join(MICROPHYSICS_DATASET_DIR, f"{flight}_microphysics_beta.nc")
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Microphysics file not found: {path}")
-    return xr.open_dataset(path)
+    return open_file(path)
 
 
 @MEMORY.cache
@@ -56,14 +55,11 @@ def load_microphysics_segment(
     sec_stop = _to_sec(t_stop)
 
     # load microphysics
-    ds = _open_micro(flight)
-    try:
+    with _open_micro(flight) as ds:
         micro_time = ds[vm.time].values  # seconds from midnight
         cloud_phase = ds[vm.cloud_phase].values  # (time,)
         conc = ds[vm.concentration].values  # (bin_centers, time), #/m^4
         bin_edges_um = ds[vm.bin_edges].values  # um, (170,)
-    finally:
-        ds.close()
 
     # time & phase mask
     in_segment = (micro_time >= sec_start) & (micro_time <= sec_stop)
