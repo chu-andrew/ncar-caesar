@@ -66,7 +66,7 @@ def make_figure(
         subplot_kw={"projection": proj},
     )
     fig.suptitle(
-        f"SWING3 Mean {title} (Jan–Apr)",
+        f"WisoMIP Mean {title} (Jan–Apr)",
         fontsize=18,
     )
 
