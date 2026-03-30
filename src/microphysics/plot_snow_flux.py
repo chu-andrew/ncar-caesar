@@ -330,21 +330,17 @@ def plot_pe_map(
     return output_path
 
 
-def plot_pe_vs_mcao_hexbin(
+def _hexbin_log_vs_mcao_by_altitude(
     df: pl.DataFrame,
+    configs: list,
+    suptitle: str,
     output_path: str,
     n_alt_bins: int = 4,
 ) -> str:
-    pe_configs = [
-        ("S_over_LWP", r"ln(S/LWP) (hr$^{-1}$)", r"$S$/LWP"),
-        ("S_over_WVP", r"ln(S/WVP) (hr$^{-1}$)", r"$S$/WVP"),
-        (
-            "S_over_VMR_VXL",
-            r"ln(S/VMR_VXL) (kg m$^{-2}$ s$^{-1}$ ppmv$^{-1}$)",
-            r"$S$/VMR",
-        ),
-    ]
+    """Generic hexbin of log(col) vs MCAO faceted by altitude bin.
 
+    configs: list of (col_name, ylabel, label) tuples.
+    """
     df_base = df.filter(
         pl.col("MCAO").is_not_null()
         & ~pl.col("MCAO").is_nan()
@@ -354,62 +350,97 @@ def plot_pe_vs_mcao_hexbin(
     df_base, bin_edges, bin_labels = _altitude_bins(df_base, n_alt_bins)
     actual_n_bins = len(bin_edges) - 1
 
-    n_rows = len(pe_configs)
+    mcao_lim = (float(df_base["MCAO"].min()), float(df_base["MCAO"].max()))
+
+    # cache per-row log-transformed dataframes and y-limits
+    df_cache = {}
+    log_lims = {}
+    for row, (col_name, _, _) in enumerate(configs):
+        df_row = df_base.filter(
+            pl.col(col_name).is_not_null() & (pl.col(col_name) > 0)
+        ).with_columns(pl.col(col_name).log().alias("log_val"))
+        df_cache[row] = df_row
+        log_vals = df_row["log_val"].to_numpy()
+        log_lims[row] = (np.nanmin(log_vals), np.nanmax(log_vals))
+
+    n_rows = len(configs)
     n_cols = actual_n_bins
     fig, axes = plt.subplots(
         n_rows, n_cols, figsize=(4.5 * n_cols, 4 * n_rows), squeeze=False
     )
 
-    # draw all hexbins, collect to find global count range
     all_hb_objects = {}  # (row, col) -> (hb, ax, n)
 
-    for row, (pe_col, ylabel, pe_label) in enumerate(pe_configs):
-        df_pe = df_base.filter(
-            pl.col(pe_col).is_not_null() & (pl.col(pe_col) > 0)
-        ).with_columns(pl.col(pe_col).log().alias("log_pe"))
+    for row, (col_name, ylabel, _) in enumerate(configs):
+        df_row = df_cache[row]
+        log_lim = log_lims[row]
 
         for col in range(actual_n_bins):
             ax = axes[row, col]
-            df_bin = df_pe.filter(pl.col("alt_bin") == col)
+            df_bin = df_row.filter(pl.col("alt_bin") == col)
             n = len(df_bin)
 
             hb = ax.hexbin(
                 df_bin["MCAO"].to_numpy(),
-                df_bin["log_pe"].to_numpy(),
+                df_bin["log_val"].to_numpy(),
                 gridsize=30,
                 cmap="inferno",
                 mincnt=1,
+                extent=[*mcao_lim, *log_lim],
             )
+            counts = hb.get_array()
+            hb.set_array(counts / counts.sum())  # normalize per plot
             all_hb_objects[(row, col)] = (hb, ax, n)
             ax.grid(True, alpha=0.2, color="white")
+            ax.set_xlim(mcao_lim)
+            ax.set_ylim(log_lim)
 
             if row == 0:
-                ax.set_title(f"{bin_labels[col]}\n(n={n})", fontsize=11)
-            else:
-                ax.set_title(f"n={n}", fontsize=10)
+                ax.set_title(bin_labels[col], fontsize=15)
+            ax.set_title(f"n={n}", fontsize=9, loc="right", color="gray")
 
             if row == n_rows - 1:
-                ax.set_xlabel("MCAO (K)", fontsize=11)
+                ax.set_xlabel("MCAO (K)", fontsize=13)
 
             if col == 0:
-                ax.set_ylabel(ylabel, fontsize=10)
+                ax.set_ylabel(ylabel, fontsize=13)
 
-    # apply one consistent color scale across all panels
     if all_hb_objects:
         global_vmax = max(hb.get_array().max() for hb, _, _ in all_hb_objects.values())
         for hb, _, _ in all_hb_objects.values():
-            hb.set_clim(1, global_vmax)
+            hb.set_clim(0, global_vmax)
 
-        # single colorbar in right margin
         last_hb = all_hb_objects[max(all_hb_objects)][0]
         fig.subplots_adjust(right=0.88, top=0.93)
-        cbar_ax = fig.add_axes([0.90, 0.1, 0.02, 0.8])
-        fig.colorbar(last_hb, cax=cbar_ax, label="count")
+        cbar_ax = fig.add_axes([0.90, 0.15, 0.02, 0.75])
+        fig.colorbar(last_hb, cax=cbar_ax, label="Fraction of observations")
 
-    fig.suptitle(r"$\ln$(PE) vs MCAO by altitude bin", fontsize=14)
+    fig.suptitle(suptitle, fontsize=18)
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
     return output_path
+
+
+def plot_pe_vs_mcao_hexbin(
+    df: pl.DataFrame,
+    output_path: str,
+    n_alt_bins: int = 4,
+) -> str:
+    return _hexbin_log_vs_mcao_by_altitude(
+        df,
+        configs=[
+            ("S_over_LWP", r"ln(S/LWP) (hr$^{-1}$)", r"$S$/LWP"),
+            ("S_over_WVP", r"ln(S/WVP) (hr$^{-1}$)", r"$S$/WVP"),
+            (
+                "S_over_VMR_VXL",
+                r"ln(S/VMR_VXL) (kg m$^{-2}$ s$^{-1}$ ppmv$^{-1}$)",
+                r"$S$/VMR",
+            ),
+        ],
+        suptitle=r"$\ln$(PE) vs MCAO by altitude bin",
+        output_path=output_path,
+        n_alt_bins=n_alt_bins,
+    )
 
 
 def plot_raw_vs_mcao_hexbin(
@@ -418,75 +449,18 @@ def plot_raw_vs_mcao_hexbin(
     n_alt_bins: int = 4,
 ) -> str:
     """2D hexbin of log(raw variable) vs MCAO by altitude bin for S, LWP, WVP, VMR_VXL."""
-    raw_configs = [
-        ("S", r"ln(S) (kg m$^{-2}$ s$^{-1}$)", "S"),
-        ("LWP", r"ln(LWP) (g m$^{-2}$)", "LWP"),
-        ("WVP", r"ln(WVP) (g m$^{-2}$)", "WVP"),
-        ("VMR_VXL", r"ln(VMR_VXL) (ppmv)", "VMR_VXL"),
-    ]
-
-    df_base = df.filter(
-        pl.col("MCAO").is_not_null()
-        & ~pl.col("MCAO").is_nan()
-        & pl.col("alt_insitu").is_not_null()
-        & ~pl.col("alt_insitu").is_nan()
+    return _hexbin_log_vs_mcao_by_altitude(
+        df,
+        configs=[
+            ("S", r"ln(S) (kg m$^{-2}$ s$^{-1}$)", "S"),
+            ("LWP", r"ln(LWP) (g m$^{-2}$)", "LWP"),
+            ("WVP", r"ln(WVP) (g m$^{-2}$)", "WVP"),
+            ("VMR_VXL", r"ln(VMR_VXL) (ppmv)", "VMR_VXL"),
+        ],
+        suptitle=r"$\ln$(raw variables) vs MCAO by altitude bin",
+        output_path=output_path,
+        n_alt_bins=n_alt_bins,
     )
-    df_base, bin_edges, bin_labels = _altitude_bins(df_base, n_alt_bins)
-    actual_n_bins = len(bin_edges) - 1
-
-    n_rows = len(raw_configs)
-    n_cols = actual_n_bins
-    fig, axes = plt.subplots(
-        n_rows, n_cols, figsize=(4.5 * n_cols, 4 * n_rows), squeeze=False
-    )
-
-    all_hb_objects = {}
-
-    for row, (col_name, ylabel, label) in enumerate(raw_configs):
-        df_raw = df_base.filter(
-            pl.col(col_name).is_not_null() & (pl.col(col_name) > 0)
-        ).with_columns(pl.col(col_name).log().alias("log_raw"))
-
-        for col in range(actual_n_bins):
-            ax = axes[row, col]
-            df_bin = df_raw.filter(pl.col("alt_bin") == col)
-            n = len(df_bin)
-
-            hb = ax.hexbin(
-                df_bin["MCAO"].to_numpy(),
-                df_bin["log_raw"].to_numpy(),
-                gridsize=30,
-                cmap="inferno",
-                mincnt=1,
-            )
-            all_hb_objects[(row, col)] = (hb, ax, n)
-            ax.grid(True, alpha=0.2, color="white")
-
-            if row == 0:
-                ax.set_title(f"{bin_labels[col]}\n(n={n})", fontsize=11)
-            else:
-                ax.set_title(f"n={n}", fontsize=10)
-
-            if row == n_rows - 1:
-                ax.set_xlabel("MCAO (K)", fontsize=11)
-
-            if col == 0:
-                ax.set_ylabel(ylabel, fontsize=10)
-
-    if all_hb_objects:
-        global_vmax = max(hb.get_array().max() for hb, _, _ in all_hb_objects.values())
-        for hb, _, _ in all_hb_objects.values():
-            hb.set_clim(1, global_vmax)
-
-        last_hb = all_hb_objects[max(all_hb_objects)][0]
-        fig.subplots_adjust(right=0.88, top=0.93)
-        cbar_ax = fig.add_axes([0.90, 0.1, 0.02, 0.8])
-        fig.colorbar(last_hb, cax=cbar_ax, label="count")
-
-    fig.suptitle(r"$\ln$(raw variables) vs MCAO by altitude bin", fontsize=14)
-    fig.savefig(output_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    return output_path
 
 
 def _altitude_bins(df: pl.DataFrame, n_bins: int):
