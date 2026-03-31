@@ -28,7 +28,7 @@ def open_file(path: Path | str, **kwargs):
     """Context manager that opens a NetCDF file by path."""
     kwargs.setdefault("decode_cf", True)
     kwargs.setdefault("decode_timedelta", True)
-    kwargs.setdefault("engine", "h5netcdf")
+    kwargs.setdefault("engine", "netcdf4")
     with xr.open_dataset(Path(path), **kwargs) as ds:
         yield ds
 
