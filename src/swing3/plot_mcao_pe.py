@@ -174,7 +174,7 @@ def plot_hexbin_by_model(
         fig.colorbar(all_hb[n_panels - 1], cax=cbar_ax, label=cbar_label)
 
     title = (
-        f"PE vs MCAO colored by {color_label.lower()}"
+        f"PE vs MCAO colored by {color_label[0].lower() + color_label[1:]}"
         if color_key
         else "Precipitation efficiency vs MCAO by WisoMIP model"
     )
