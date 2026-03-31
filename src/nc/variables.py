@@ -51,7 +51,7 @@ def export_variable_groups(files: list[Path], output_dir: str) -> None:
     print(f"Found {len(files)} files, {len(groups)} unique variable set(s)\n")
 
     for var_set, paths in groups.items():
-        labels = [p.name.split(".")[0] for p in paths]
+        labels = [p.stem for p in paths]
         csv_path = os.path.join(output_dir, _make_csv_name(labels))
         export_csv(first_vars[var_set], csv_path)
         print(f"\tFiles: {labels} ({len(var_set)} variables)")

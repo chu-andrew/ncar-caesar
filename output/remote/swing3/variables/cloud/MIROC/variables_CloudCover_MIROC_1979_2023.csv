@@ -1,0 +1,6 @@
+variable,long_name,units
+cldfrc,"",1
+time,"",months since 1979-1-15 00:00:00
+lon,longitude,degrees_east
+lat,latitude,degrees_north
+p,pressure,mb

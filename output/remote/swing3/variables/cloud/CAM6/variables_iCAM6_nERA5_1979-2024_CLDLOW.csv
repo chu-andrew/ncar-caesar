@@ -1,0 +1,6 @@
+variable,long_name,units
+time_bnds,time interval endpoints,""
+CLDLOW,Vertically-integrated low cloud,fraction
+lat,latitude,degrees_north
+lon,longitude,degrees_east
+time,time,days since 1978-01-01 00:00:00

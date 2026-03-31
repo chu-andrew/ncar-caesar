@@ -1,0 +1,7 @@
+variable,long_name,units
+pcldl,LOW LEVEL CLOUDINESS,%
+pcldm,MIDDLE LEVEL CLOUDINESS,%
+pcldh,HIGH LEVEL CLOUDINESS,%
+time,"",day as %Y%m%d.%f
+lon,longitude,degrees_east
+lat,latitude,degrees_north

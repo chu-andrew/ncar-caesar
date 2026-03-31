@@ -1,0 +1,14 @@
+variable,long_name,units
+hyam,hybrid A coefficient at layer midpoints,""
+hybm,hybrid B coefficient at layer midpoints,""
+P0,reference pressure,Pa
+hyai,hybrid A coefficient at layer interfaces,""
+hybi,hybrid B coefficient at layer interfaces,""
+time_bnds,time interval endpoints,""
+CLOUD,Cloud fraction,fraction
+PS,Surface pressure,Pa
+lat,latitude,degrees_north
+lon,longitude,degrees_east
+lev,hybrid level at midpoints (1000*(A+B)),hPa
+ilev,hybrid level at interfaces (1000*(A+B)),hPa
+time,time,days since 1978-01-01 00:00:00
