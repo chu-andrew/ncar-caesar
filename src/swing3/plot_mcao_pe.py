@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import gaussian_kde
 
+from microphysics.snow_mass_flux import build_flux_dataset
 from nc.loader import PROJECT_ROOT
 from nc.remote import SWING3_MODELS
 from swing3.models import HEX_VARS, load_mcao_pe_hex
@@ -11,6 +12,20 @@ from swing3.sst import load_sst
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots")
 MODELS = list(SWING3_MODELS.keys())
+
+
+def load_caesar_mcao_pe() -> tuple[np.ndarray, np.ndarray]:
+    df = build_flux_dataset()
+    df = df.filter(
+        df["MCAO"].is_not_null()
+        & ~df["MCAO"].is_nan()
+        & df["S_over_LWP"].is_not_null()
+        & (df["S_over_LWP"] > 0)
+    )
+    mcao = df["MCAO"].to_numpy()
+    pe = np.log(df["S_over_LWP"].to_numpy())
+    mask = np.isfinite(mcao) & np.isfinite(pe)
+    return mcao[mask], pe[mask]
 
 
 def _axis_limits(all_data, buffer=1):
@@ -32,15 +47,18 @@ def plot_hexbin_by_model(
     color_label: str | None = None,
     reduce_func: str = "median",
     log_color: bool = False,
+    caesar: tuple[np.ndarray, np.ndarray] | None = None,
 ) -> None:
     """PE vs MCAO hexbins per model.
 
     If color_key is None, hexbins are colored by density (fraction of observations).
     Otherwise, hexbins are colored by the median/mean of the named color variable.
+    If caesar is provided (mcao, ln_pe), an extra panel shows CAESAR observations.
     """
     models = list(all_data.keys())
+    n_panels = len(models) + (1 if caesar is not None and color_key is None else 0)
     n_cols = 4
-    n_rows = (len(models) + n_cols - 1) // n_cols
+    n_rows = (n_panels + n_cols - 1) // n_cols
     mcao_lim, pe_lim = _axis_limits(all_data)
 
     fig, axes = plt.subplots(
@@ -99,7 +117,39 @@ def plot_hexbin_by_model(
         if col == 0:
             ax.set_ylabel("PE (%)", fontsize=11)
 
-    for idx in range(len(models), n_rows * n_cols):
+    # CAESAR observation panel (density plots only)
+    if caesar is not None and color_key is None:
+        caesar_idx = len(models)
+        row, col = divmod(caesar_idx, n_cols)
+        ax = axes[row, col]
+        c_mcao, c_pe = caesar
+        n = len(c_mcao)
+
+        c_mcao_lim = (c_mcao.min() - 1, c_mcao.max() + 1)
+        c_pe_lim = (c_pe.min() - 0.5, c_pe.max() + 0.5)
+
+        hb = ax.hexbin(
+            c_mcao,
+            c_pe,
+            gridsize=30,
+            cmap="inferno",
+            mincnt=1,
+            extent=[*c_mcao_lim, *c_pe_lim],
+        )
+        counts = hb.get_array()
+        hb.set_array(counts / counts.sum())
+
+        all_hb[caesar_idx] = hb
+        ax.grid(True, alpha=0.4, color="white")
+        ax.set_xlim(c_mcao_lim)
+        ax.set_ylim(c_pe_lim)
+
+        ax.set_title("CAESAR", fontsize=16)
+        ax.set_title(f"(n={n:,})", fontsize=10, loc="right", color="gray")
+        ax.set_xlabel("MCAO (K)", fontsize=11)
+        ax.set_ylabel(r"$\ln$(S/LWP) (hr$^{-1}$)", fontsize=11, labelpad=-2)
+
+    for idx in range(n_panels, n_rows * n_cols):
         axes[divmod(idx, n_cols)].set_visible(False)
 
     # Shared color scale
@@ -121,7 +171,7 @@ def plot_hexbin_by_model(
 
         fig.subplots_adjust(right=0.90, top=0.90, hspace=0.30)
         cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.70])
-        fig.colorbar(all_hb[len(models) - 1], cax=cbar_ax, label=cbar_label)
+        fig.colorbar(all_hb[n_panels - 1], cax=cbar_ax, label=cbar_label)
 
     title = (
         f"PE vs MCAO colored by {color_label.lower()}"
@@ -235,8 +285,12 @@ def main() -> None:
         print(f"\t{model}: {len(mcao):,} valid points (PE <= 100%)")
         all_data[model] = (mcao, pe, fields)
 
+    print("Loading CAESAR observations...")
+    caesar = load_caesar_mcao_pe()
+    print(f"\tCAESAR: {len(caesar[0]):,} valid points")
+
     out_hexbin = os.path.join(PLOTS_DIR, "pe_vs_mcao_hexbin_by_model.png")
-    plot_hexbin_by_model(all_data, out_hexbin)
+    plot_hexbin_by_model(all_data, out_hexbin, caesar=caesar)
 
     out_kde = os.path.join(PLOTS_DIR, "kde_by_model.png")
     plot_kde_by_model(all_data, out_kde)
