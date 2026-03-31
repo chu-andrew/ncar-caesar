@@ -59,14 +59,12 @@ def _load_model_data(
 
         t850 = _sel_region(
             ds[v.temperature]
-            .sel(
-                {v.pressure: P_850}, method="nearest"
-            )  # TODO: linear interpolation for P850?
+            .sel({v.pressure: P_850}, method="nearest")
             .isel({time_dim: jfma})
         ).load()
         theta850 = (
             mpcalc.potential_temperature(
-                P_850 * munits.hPa,  # FIXME: is it correct to use P850 here?
+                P_850 * munits.hPa,
                 t850.values * munits.degC,
             )
             .to("K")
