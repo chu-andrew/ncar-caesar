@@ -6,54 +6,89 @@ from scipy.stats import gaussian_kde
 
 from nc.loader import PROJECT_ROOT
 from nc.remote import SWING3_MODELS
-from swing3.models import load_mcao_pe
+from swing3.models import HEX_VARS, load_mcao_pe_hex
 from swing3.sst import load_sst
 
 PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots")
 MODELS = list(SWING3_MODELS.keys())
 
 
+def _axis_limits(all_data, buffer=1):
+    mcao_lim = (
+        min(d[0].min() for d in all_data.values()) - buffer,
+        max(d[0].max() for d in all_data.values()) + buffer,
+    )
+    pe_lim = (
+        min(d[1].min() for d in all_data.values()) - buffer,
+        max(d[1].max() for d in all_data.values()) + buffer,
+    )
+    return mcao_lim, pe_lim
+
+
 def plot_hexbin_by_model(
-    all_data: dict[str, tuple[np.ndarray, np.ndarray]],
+    all_data: dict[str, tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]],
     output_path: str,
+    color_key: str | None = None,
+    color_label: str | None = None,
+    reduce_func: str = "median",
+    log_color: bool = False,
 ) -> None:
+    """PE vs MCAO hexbins per model.
+
+    If color_key is None, hexbins are colored by density (fraction of observations).
+    Otherwise, hexbins are colored by the median/mean of the named color variable.
+    """
     models = list(all_data.keys())
     n_cols = 4
     n_rows = (len(models) + n_cols - 1) // n_cols
-
-    BUFFER = 1  # to prevent hexbins from being clipped by axis edges
-    mcao_lim = (
-        min(d[0].min() for d in all_data.values()) - BUFFER,
-        max(d[0].max() for d in all_data.values()) + BUFFER,
-    )
-    pe_lim = (
-        min(d[1].min() for d in all_data.values()) - BUFFER,
-        max(d[1].max() for d in all_data.values()) + BUFFER,
-    )
+    mcao_lim, pe_lim = _axis_limits(all_data)
 
     fig, axes = plt.subplots(
         n_rows, n_cols, figsize=(4.5 * n_cols, 4.5 * n_rows), squeeze=False
     )
 
-    all_hb_objects = {}  # flat index -> hb
+    all_hb = {}
 
     for idx, model in enumerate(models):
         row, col = divmod(idx, n_cols)
         ax = axes[row, col]
-        mcao, pe = all_data[model]
+        mcao, pe, fields = all_data[model]
         n = len(mcao)
 
-        hb = ax.hexbin(
-            mcao,
-            pe,
-            gridsize=30,
-            cmap="inferno",
-            mincnt=1,
-            extent=[*mcao_lim, *pe_lim],
-        )
-        counts = hb.get_array()
-        hb.set_array(counts / counts.sum())
-        all_hb_objects[idx] = hb
+        if color_key is None:
+            hb = ax.hexbin(
+                mcao,
+                pe,
+                gridsize=30,
+                cmap="inferno",
+                mincnt=1,
+                extent=[*mcao_lim, *pe_lim],
+            )
+            counts = hb.get_array()
+            hb.set_array(counts / counts.sum())
+        else:
+            REDUCE_FUNCS = {"median": np.nanmedian, "mean": np.nanmean}
+            if reduce_func not in REDUCE_FUNCS:
+                raise ValueError(
+                    f"Unknown reduce_func {reduce_func!r}, expected one of {list(REDUCE_FUNCS)}"
+                )
+            reduce = REDUCE_FUNCS[reduce_func]
+            c_vals = fields[color_key]
+            if log_color:
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    c_vals = np.where(c_vals > 0, np.log(c_vals), np.nan)
+            hb = ax.hexbin(
+                mcao,
+                pe,
+                C=c_vals,
+                reduce_C_function=reduce,
+                gridsize=30,
+                cmap="inferno",
+                mincnt=1,
+                extent=[*mcao_lim, *pe_lim],
+            )
+
+        all_hb[idx] = hb
         ax.grid(True, alpha=0.4, color="white")
         ax.set_xlim(mcao_lim)
         ax.set_ylim(pe_lim)
@@ -67,28 +102,40 @@ def plot_hexbin_by_model(
     for idx in range(len(models), n_rows * n_cols):
         axes[divmod(idx, n_cols)].set_visible(False)
 
-    # shared color scale
-    if all_hb_objects:
-        global_vmax = max(hb.get_array().max() for hb in all_hb_objects.values())
-        for hb in all_hb_objects.values():
-            hb.set_clim(0, global_vmax)
+    # Shared color scale
+    if all_hb:
+        if color_key is None:
+            vmin = 0
+            vmax = max(hb.get_array().max() for hb in all_hb.values())
+            cbar_label = "Fraction of observations"
+        else:
+            all_c = np.concatenate(
+                [np.asarray(hb.get_array(), dtype=float) for hb in all_hb.values()]
+            )
+            all_c = all_c[np.isfinite(all_c)]
+            vmin, vmax = np.min(all_c), np.max(all_c)
+            cbar_label = color_label
+
+        for hb in all_hb.values():
+            hb.set_clim(vmin, vmax)
 
         fig.subplots_adjust(right=0.90, top=0.90, hspace=0.30)
         cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.70])
-        fig.colorbar(
-            all_hb_objects[len(models) - 1],
-            cax=cbar_ax,
-            label="Fraction of observations",
-        )
+        fig.colorbar(all_hb[len(models) - 1], cax=cbar_ax, label=cbar_label)
 
-    fig.suptitle("Precipitation efficiency vs MCAO by WisoMIP model", fontsize=18)
+    title = (
+        f"PE vs MCAO colored by {color_label.lower()}"
+        if color_key
+        else "Precipitation efficiency vs MCAO by WisoMIP model"
+    )
+    fig.suptitle(title, fontsize=18)
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved: {output_path}")
 
 
 def plot_kde_by_model(
-    all_data: dict[str, tuple[np.ndarray, np.ndarray]],
+    all_data: dict[str, tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]],
     output_path: str,
 ) -> None:
     models = list(all_data.keys())
@@ -181,15 +228,29 @@ def main() -> None:
     all_data = {}
     for model in MODELS:
         print(f"Loading {model}...")
-        mcao, pe = load_mcao_pe(model, sst_da=sst_da)
-        print(f"\t{model}: {len(mcao):,} valid points")
-        all_data[model] = (mcao, pe)
+        mcao, pe, fields = load_mcao_pe_hex(model, sst_da=sst_da)
+        mask = pe <= 100
+        mcao, pe = mcao[mask], pe[mask]
+        fields = {k: arr[mask] for k, arr in fields.items()}
+        print(f"\t{model}: {len(mcao):,} valid points (PE <= 100%)")
+        all_data[model] = (mcao, pe, fields)
 
     out_hexbin = os.path.join(PLOTS_DIR, "pe_vs_mcao_hexbin_by_model.png")
     plot_hexbin_by_model(all_data, out_hexbin)
 
     out_kde = os.path.join(PLOTS_DIR, "kde_by_model.png")
     plot_kde_by_model(all_data, out_kde)
+
+    for hv in HEX_VARS:
+        out = os.path.join(PLOTS_DIR, f"pe_vs_mcao_hexbin_{hv.key}.png")
+        plot_hexbin_by_model(
+            all_data,
+            out,
+            color_key=hv.key,
+            color_label=hv.label,
+            reduce_func=hv.reduce_func,
+            log_color=hv.log_color,
+        )
 
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 import metpy.calc as mpcalc
 import numpy as np
 import pandas as pd
@@ -16,6 +18,15 @@ from swing3.sst import load_sst
 P_850 = 850  # hPa
 
 
+def _sel_region(da: xr.DataArray) -> xr.DataArray:
+    """Crop to CAESAR_BOUNDS and correct longitude to degrees East."""
+    da = da.assign_coords(lon=((da.lon + 180) % 360 - 180)).sortby("lon")
+    return da.sortby("lat").sel(
+        lat=slice(bounds["MIN_LAT"], bounds["MAX_LAT"]),
+        lon=slice(bounds["MIN_LON"], bounds["MAX_LON"]),
+    )
+
+
 def jfma_indices(n_times: int) -> np.ndarray:
     """Indices of Jan–Apr months in a monthly series of length n_times starting 1979-01-01."""
     JFMA = (1, 2, 3, 4)  # January through April
@@ -24,24 +35,51 @@ def jfma_indices(n_times: int) -> np.ndarray:
     return np.where(dates.month.isin(JFMA))[0]
 
 
+class HexVar(NamedTuple):
+    key: str
+    var_name: str | None
+    label: str
+    reduce_func: str
+    p_range: tuple[int, int] | None
+    log_color: bool = False
+
+
+HEX_VARS = [
+    HexVar("dDp_median", "dDp", r"Median $\delta D$ precipitation (‰)", "median", None),
+    HexVar(
+        "dexcessp_median",
+        "dexcessp",
+        r"Median d-excess precipitation (‰)",
+        "median",
+        None,
+    ),
+    HexVar(
+        "sh_median", "sh", r"Median surface specific humidity (kg/kg)", "median", None
+    ),
+    HexVar(
+        "dD_ft_mean", "dD", r"Mean $\delta D$ vapor 600-800 hPa (‰)", "mean", (600, 800)
+    ),
+    HexVar(
+        "dD_bl_mean", "dD", r"Mean $\delta D$ vapor 800-925 hPa (‰)", "mean", (800, 925)
+    ),
+    HexVar("pr_mean", "pr", r"Mean surface precipitation rate (mm/day)", "mean", None),
+    HexVar("ev_mean", "ev", r"Mean surface evaporation rate (mm/day)", "mean", None),
+    HexVar(
+        "pr_over_ev_mean",
+        None,
+        r"Mean $\ln$(surface precipitation/evaporation rate)",
+        "mean",
+        None,
+        log_color=True,
+    ),
+]
+
+
 @MEMORY.cache
 def _load_model_data(
     model: str, sst_da: xr.DataArray
-) -> tuple[xr.DataArray, xr.DataArray, str]:
-    """
-    Load Jan–Apr MCAO (SST − θ850) and PE for one model, cropped to CAESAR_BOUNDS.
-
-    Returns (mcao, pref, time_dim) as DataArrays of shape (time, lat, lon).
-    """
-
-    def _sel_region(da):
-        """Filter CAESAR bounds and correct longitude (degrees East)"""
-        da = da.assign_coords(lon=((da.lon + 180) % 360 - 180)).sortby("lon")
-        return da.sortby("lat").sel(
-            lat=slice(bounds["MIN_LAT"], bounds["MAX_LAT"]),
-            lon=slice(bounds["MIN_LON"], bounds["MAX_LON"]),
-        )
-
+) -> tuple[xr.DataArray, xr.DataArray, dict[str, np.ndarray], str]:
+    """Load Jan-Apr MCAO, PE, and hexbin overlay fields for one model over CAESAR_BOUNDS."""
     time_dim = v_lmdz.time if model == "LMDZ" else v.time
     n_sst = sst_da.sizes[v_sst.time]
     sst_region = _sel_region(sst_da)
@@ -73,24 +111,42 @@ def _load_model_data(
 
         pref = _sel_region(ds[v.precip_efficiency].isel({time_dim: jfma})).load()
 
+        # overlay fields for hexbin plots
+        fields = {}
+        for hv in HEX_VARS:
+            if hv.var_name is None:
+                continue
+            if hv.p_range is not None:
+                p_lo, p_hi = hv.p_range
+                da = ds[hv.var_name].isel({time_dim: jfma})
+                # pressure axis is descending, so slice high-to-low
+                da = da.sel({v.pressure: slice(p_hi, p_lo)}).mean(dim=v.pressure)
+                fields[hv.key] = _sel_region(da).load().values
+            else:
+                fields[hv.key] = (
+                    _sel_region(ds[hv.var_name].isel({time_dim: jfma})).load().values
+                )
+
+        # derived: pr / ev
+        pr = fields["pr_mean"]
+        ev = fields["ev_mean"]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            fields["pr_over_ev_mean"] = np.where(ev > 0, pr / ev, np.nan)
+
     sst_jfma = sst_region.values[jfma]
 
     mcao = pref.copy(data=sst_jfma - theta850)
-    return mcao, pref, time_dim
+    return mcao, pref, fields, time_dim
 
 
 def load_mcao_pe(
     model: str, sst_da: xr.DataArray | None = None
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    1-D arrays of valid MCAO and PE over Jan–Apr x lat x lon.
-
-    Pass sst_da to reuse an already-loaded SST DataArray across models.
-    """
+    """Flat 1-D MCAO and PE arrays (finite values only)."""
     if sst_da is None:
         sst_da = load_sst()
 
-    mcao, pref, _ = _load_model_data(model, sst_da)
+    mcao, pref, _, _ = _load_model_data(model, sst_da)
 
     mcao_flat = mcao.values.ravel()
     pe_flat = pref.values.ravel()
@@ -98,12 +154,29 @@ def load_mcao_pe(
     return mcao_flat[mask], pe_flat[mask]
 
 
-def load_mcao_pe_clim(
+def load_mcao_pe_hex(
     model: str, sst_da: xr.DataArray | None = None
-) -> tuple[xr.DataArray, xr.DataArray]:
-    """Jan–Apr climatological mean MCAO and PE on the model's native grid (lat x lon)."""
+) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
+    """Flat 1-D MCAO, PE, and hexbin overlay fields (finite MCAO/PE only)."""
     if sst_da is None:
         sst_da = load_sst()
 
-    mcao, pref, time_dim = _load_model_data(model, sst_da)
+    mcao, pref, fields_3d, _ = _load_model_data(model, sst_da)
+
+    mcao_flat = mcao.values.ravel()
+    pe_flat = pref.values.ravel()
+    mask = np.isfinite(mcao_flat) & np.isfinite(pe_flat)
+
+    fields_flat = {k: arr.ravel()[mask] for k, arr in fields_3d.items()}
+    return mcao_flat[mask], pe_flat[mask], fields_flat
+
+
+def load_mcao_pe_clim(
+    model: str, sst_da: xr.DataArray | None = None
+) -> tuple[xr.DataArray, xr.DataArray]:
+    """Jan-Apr climatological mean MCAO and PE on the model's native grid."""
+    if sst_da is None:
+        sst_da = load_sst()
+
+    mcao, pref, _, time_dim = _load_model_data(model, sst_da)
     return mcao.mean(dim=time_dim), pref.mean(dim=time_dim)
