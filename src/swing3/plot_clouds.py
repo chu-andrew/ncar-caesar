@@ -12,7 +12,7 @@ from swing3.clouds import (
 )
 from swing3.plot_mcao_pe_map import setup_map
 
-PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots/clouds")
 
 
 def _plot_cloud_clim(loader, title: str, out_filename: str) -> None:

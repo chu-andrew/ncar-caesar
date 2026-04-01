@@ -12,12 +12,14 @@ from nc.loader import open_file
 from nc.remote import CLOUD_DIR, SWING3_MODELS
 from nc.vars import SWING3 as v
 from nc.vars import SWING3_LMDZ as v_lmdz
-from swing3.models import _crop_region, JFMA, START_YEAR, END_YEAR
+from swing3.models import crop_region, JFMA
 
 CDO = Cdo()
 
 MODELS = list(SWING3_MODELS.keys())
 
+START_YEAR = 1979
+END_YEAR = 2023
 
 
 class CloudSpec(NamedTuple):
@@ -67,7 +69,7 @@ def load_low_cloud(model: str) -> xr.DataArray:
     with open_file(cloud_file, **open_kwargs) as ds:
         ds = _fix_time(ds, model, time_dim)
         da = ds[spec.cloud_cover_var]
-        da = _crop_region(da)
+        da = crop_region(da)
 
         if spec.pressure_gt_hpa is not None:
             da = da.sel({v.pressure: da[v.pressure] > spec.pressure_gt_hpa}).max(
@@ -133,7 +135,7 @@ def _t42_grid() -> tuple[np.ndarray, np.ndarray]:
     ref_model = MODELS[0]
     time_dim = v_lmdz.time if ref_model == "LMDZ" else v.time
     with open_file(SWING3_MODELS[ref_model], decode_times=False) as ds:
-        ref = _crop_region(ds[v.precip_efficiency].isel({time_dim: 0}))
+        ref = crop_region(ds[v.precip_efficiency].isel({time_dim: 0}))
         return ref.lat.values, ref.lon.values
 
 
@@ -190,10 +192,16 @@ def _select_jfma(da: xr.DataArray, time_dim: str) -> xr.DataArray:
 
 
 def _nan_da() -> xr.DataArray:
-    """Placeholder all-NaN DataArray for unavailable cloud data."""
+    """Placeholder all-NaN DataArray for unavailable cloud data on the T42 grid."""
     n_jfma = (END_YEAR - START_YEAR + 1) * len(JFMA)
+    lat_t42, lon_t42 = _t42_grid()
+
     return xr.DataArray(
-        np.full((n_jfma, 1, 1), np.nan),
+        np.full((n_jfma, len(lat_t42), len(lon_t42)), np.nan),
         dims=["time", "lat", "lon"],
+        coords={
+            "lat": lat_t42,
+            "lon": lon_t42,
+        },  # Explicitly defines the spatial region
         attrs={"units": "%", "long_name": "Low cloud fraction (unavailable)"},
     )

@@ -7,28 +7,17 @@ import xarray as xr
 from metpy.units import units as munits
 
 from nc.cache import MEMORY
-from nc.flights import CAESAR_BOUNDS as bounds
 from nc.loader import open_file
 from nc.remote import SWING3_MODELS
 from nc.vars import SWING3 as v
 from nc.vars import SWING3_LMDZ as v_lmdz
 from nc.vars import SWING3_SST as v_sst
+from swing3.grids import crop_region
 from swing3.sst import load_sst
 
 P_850 = 850  # hPa
 
-START_YEAR = 1979
-END_YEAR = 2023
 JFMA = frozenset({1, 2, 3, 4})
-
-
-def _crop_region(da: xr.DataArray) -> xr.DataArray:
-    """Crop to CAESAR_BOUNDS and correct longitude to degrees East."""
-    da = da.assign_coords(lon=((da.lon + 180) % 360 - 180)).sortby("lon")
-    return da.sortby("lat").sel(
-        lat=slice(bounds["MIN_LAT"], bounds["MAX_LAT"]),
-        lon=slice(bounds["MIN_LON"], bounds["MAX_LON"]),
-    )
 
 
 def jfma_indices(n_times: int) -> np.ndarray:
@@ -84,7 +73,7 @@ def _load_model_data(
     """Load Jan-Apr MCAO, PE, and hexbin overlay fields for one model over CAESAR_BOUNDS."""
     time_dim = v_lmdz.time if model == "LMDZ" else v.time
     n_sst = sst_da.sizes[v_sst.time]
-    sst_region = _crop_region(sst_da)
+    sst_region = crop_region(sst_da)
 
     with open_file(SWING3_MODELS[model], decode_times=False) as ds:
         n_times = ds.sizes[time_dim]
@@ -97,7 +86,7 @@ def _load_model_data(
 
         jfma = jfma_indices(n_min)
 
-        t850 = _crop_region(
+        t850 = crop_region(
             ds[v.temperature]
             .sel({v.pressure: P_850}, method="nearest")
             .isel({time_dim: jfma})
@@ -111,7 +100,7 @@ def _load_model_data(
             .magnitude
         )
 
-        pref = _crop_region(ds[v.precip_efficiency].isel({time_dim: jfma})).load()
+        pref = crop_region(ds[v.precip_efficiency].isel({time_dim: jfma})).load()
 
         # overlay fields for hexbin plots
         fields = {}
@@ -123,10 +112,10 @@ def _load_model_data(
                 da = ds[hv.var_name].isel({time_dim: jfma})
                 # pressure axis is descending, so slice high-to-low
                 da = da.sel({v.pressure: slice(p_hi, p_lo)}).mean(dim=v.pressure)
-                fields[hv.key] = _crop_region(da).load().values
+                fields[hv.key] = crop_region(da).load().values
             else:
                 fields[hv.key] = (
-                    _crop_region(ds[hv.var_name].isel({time_dim: jfma})).load().values
+                    crop_region(ds[hv.var_name].isel({time_dim: jfma})).load().values
                 )
 
         # derived: pr / ev

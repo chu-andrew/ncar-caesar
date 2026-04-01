@@ -1,9 +1,19 @@
 import numpy as np
 import xarray as xr
 
+from nc.flights import CAESAR_BOUNDS as bounds
 from nc.loader import open_file
 from nc.remote import ERA5_SST, SWING3_MODELS
 from nc.cache import MEMORY
+
+
+def crop_region(da: xr.DataArray) -> xr.DataArray:
+    """Crop to CAESAR_BOUNDS and correct longitude to degrees East."""
+    da = da.assign_coords(lon=((da.lon + 180) % 360 - 180)).sortby("lon")
+    return da.sortby("lat").sel(
+        lat=slice(bounds["MIN_LAT"], bounds["MAX_LAT"]),
+        lon=slice(bounds["MIN_LON"], bounds["MAX_LON"]),
+    )
 
 
 @MEMORY.cache
