@@ -90,20 +90,27 @@ def load_low_cloud_clim(model: str) -> xr.DataArray:
     return da
 
 
-def load_low_cloud_clim_t42(model: str) -> xr.DataArray:
-    """JFMA climatological mean low-cloud fraction regridded to the model's T42 grid."""
-    clim = load_low_cloud_clim(model)
-    model_lat, model_lon = _model_grid(model)
+def load_low_cloud_t42(model: str) -> xr.DataArray:
+    """JFMA low-cloud fraction time series regridded to the T42 grid."""
+    da = load_low_cloud(model)
+    lat, lon = _t42_grid()
 
     # FIXME: consider using xesmf for proper regridding
-    return clim.interp(lat=model_lat, lon=model_lon, method="nearest")
+    return da.interp(lat=lat, lon=lon, method="nearest")
+
+
+def load_low_cloud_clim_t42(model: str) -> xr.DataArray:
+    """JFMA climatological mean low-cloud fraction regridded to the T42 grid."""
+    time_dim = v_lmdz.time if model == "LMDZ" else v.time
+    return load_low_cloud_t42(model).mean(dim=time_dim)
 
 
 @MEMORY.cache
-def _model_grid(model: str) -> tuple[np.ndarray, np.ndarray]:
-    """Return the (lat, lon) coordinate arrays for a SWING3 model cropped to CAESAR_BOUNDS."""
-    time_dim = v_lmdz.time if model == "LMDZ" else v.time
-    with open_file(SWING3_MODELS[model], decode_times=False) as ds:
+def _t42_grid() -> tuple[np.ndarray, np.ndarray]:
+    """T42 grid lat/lon from a reference SWING3 model, cropped to CAESAR_BOUNDS."""
+    ref_model = MODELS[0]
+    time_dim = v_lmdz.time if ref_model == "LMDZ" else v.time
+    with open_file(SWING3_MODELS[ref_model], decode_times=False) as ds:
         ref = _crop_region(ds[v.precip_efficiency].isel({time_dim: 0}))
         return ref.lat.values, ref.lon.values
 
