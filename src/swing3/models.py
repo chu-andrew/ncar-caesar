@@ -17,8 +17,12 @@ from swing3.sst import load_sst
 
 P_850 = 850  # hPa
 
+START_YEAR = 1979
+END_YEAR = 2023
+JFMA = frozenset({1, 2, 3, 4})
 
-def _sel_region(da: xr.DataArray) -> xr.DataArray:
+
+def _crop_region(da: xr.DataArray) -> xr.DataArray:
     """Crop to CAESAR_BOUNDS and correct longitude to degrees East."""
     da = da.assign_coords(lon=((da.lon + 180) % 360 - 180)).sortby("lon")
     return da.sortby("lat").sel(
@@ -29,8 +33,6 @@ def _sel_region(da: xr.DataArray) -> xr.DataArray:
 
 def jfma_indices(n_times: int) -> np.ndarray:
     """Indices of Jan–Apr months in a monthly series of length n_times starting 1979-01-01."""
-    JFMA = (1, 2, 3, 4)  # January through April
-
     dates = pd.date_range("1979-01-01", periods=n_times, freq="MS")
     return np.where(dates.month.isin(JFMA))[0]
 
@@ -82,7 +84,7 @@ def _load_model_data(
     """Load Jan-Apr MCAO, PE, and hexbin overlay fields for one model over CAESAR_BOUNDS."""
     time_dim = v_lmdz.time if model == "LMDZ" else v.time
     n_sst = sst_da.sizes[v_sst.time]
-    sst_region = _sel_region(sst_da)
+    sst_region = _crop_region(sst_da)
 
     with open_file(SWING3_MODELS[model], decode_times=False) as ds:
         n_times = ds.sizes[time_dim]
@@ -95,7 +97,7 @@ def _load_model_data(
 
         jfma = jfma_indices(n_min)
 
-        t850 = _sel_region(
+        t850 = _crop_region(
             ds[v.temperature]
             .sel({v.pressure: P_850}, method="nearest")
             .isel({time_dim: jfma})
@@ -109,7 +111,7 @@ def _load_model_data(
             .magnitude
         )
 
-        pref = _sel_region(ds[v.precip_efficiency].isel({time_dim: jfma})).load()
+        pref = _crop_region(ds[v.precip_efficiency].isel({time_dim: jfma})).load()
 
         # overlay fields for hexbin plots
         fields = {}
@@ -121,10 +123,10 @@ def _load_model_data(
                 da = ds[hv.var_name].isel({time_dim: jfma})
                 # pressure axis is descending, so slice high-to-low
                 da = da.sel({v.pressure: slice(p_hi, p_lo)}).mean(dim=v.pressure)
-                fields[hv.key] = _sel_region(da).load().values
+                fields[hv.key] = _crop_region(da).load().values
             else:
                 fields[hv.key] = (
-                    _sel_region(ds[hv.var_name].isel({time_dim: jfma})).load().values
+                    _crop_region(ds[hv.var_name].isel({time_dim: jfma})).load().values
                 )
 
         # derived: pr / ev
