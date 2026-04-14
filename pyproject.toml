@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "cartopy>=0.25.0",
+    "cdo>=1.6.1",
     "dotenv>=0.9.9",
     "joblib>=1.5.3",
     "metpy>=1.7.1",

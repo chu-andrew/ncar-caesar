@@ -36,6 +36,18 @@ wheels = [
 ]
 
 [[package]]
+name = "cdo"
+version = "1.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "six" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/c8/717b1beb0c997aeb9eaf6bd98ba5514d5de716e679bb0b173b5c867c2958/cdo-1.6.1-py3-none-any.whl", hash = "sha256:772abda398b6a102ff55be19fa7154c65af0bf2132d133bdea651e57a5ba895f", size = 16286, upload-time = "2024-07-17T14:54:02.704Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -468,6 +480,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "cartopy" },
+    { name = "cdo" },
     { name = "dotenv" },
     { name = "joblib" },
     { name = "metpy" },
@@ -491,6 +504,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cartopy", specifier = ">=0.25.0" },
+    { name = "cdo", specifier = ">=1.6.1" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "joblib", specifier = ">=1.5.3" },
     { name = "metpy", specifier = ">=1.7.1" },
