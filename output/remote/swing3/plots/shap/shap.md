@@ -35,6 +35,43 @@ Each bar shows the fraction of Stage 4 R2 attributed to each predictor group (th
 
 ---
 
+## Isotope-only beeswarm plots
+
+Each figure shows SHAP values for a model trained on only the three isotope predictors (dD_gradient, dDp, dexcessp). This isolates the standalone predictive skill of isotopes. The R2 in the title is the mean out-of-sample test score across 25 random splits. Across all models, isotope-only R2 is substantially larger than the marginal gain from adding isotopes to Stage 3, indicating that most of the isotope signal is shared with thermodynamics, dynamics, and clouds.
+
+| Model | Isotope-only | Stage 3 | Stage 4 | Isotope contribution (staged model, Stage 4 - Stage 3) |
+|-------|--------------|---------|---------|--------------------------------------------------------|
+| CAM5  | 0.198        | 0.607   | 0.646   | 0.039                                                  |
+| CAM6  | 0.217        | 0.669   | 0.680   | 0.011                                                  |
+| ECHAM | 0.252        | 0.591   | 0.649   | 0.057                                                  |
+| GISS  | 0.258        | 0.607   | 0.639   | 0.032                                                  |
+| GSM   | 0.332        | 0.744   | 0.774   | 0.030                                                  |
+| LMDZ  | 0.207        | 0.589   | 0.645   | 0.055                                                  |
+| MIROC | 0.232        | 0.696   | 0.719   | 0.023                                                  |
+
+### CAM5
+![CAM5 isotope-only beeswarm](isotope/CAM5_isotope_beeswarm.png)
+
+### CAM6
+![CAM6 isotope-only beeswarm](isotope/CAM6_isotope_beeswarm.png)
+
+### ECHAM
+![ECHAM isotope-only beeswarm](isotope/ECHAM_isotope_beeswarm.png)
+
+### GISS
+![GISS isotope-only beeswarm](isotope/GISS_isotope_beeswarm.png)
+
+### GSM
+![GSM isotope-only beeswarm](isotope/GSM_isotope_beeswarm.png)
+
+### LMDZ
+![LMDZ isotope-only beeswarm](isotope/LMDZ_isotope_beeswarm.png)
+
+### MIROC
+![MIROC isotope-only beeswarm](isotope/MIROC_isotope_beeswarm.png)
+
+---
+
 ## Intermodel feature importance heatmap (Stage 4)
 
 Normalized mean |SHAP| per feature across all models.
