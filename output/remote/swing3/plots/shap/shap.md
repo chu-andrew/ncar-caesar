@@ -27,6 +27,14 @@ Each figure shows one model across four staged predictor sets (Thermo -> +Dynami
 
 ---
 
+## Group-level PE attribution via Shapley values
+
+Each bar shows the fraction of Stage 4 R2 attributed to each predictor group (thermodynamics, dynamics, clouds, isotopes) for one model. Attributions are computed using the group Shapley value (Shapley 1953; Jullum et al. 2021): each group's value is its average marginal R2 contribution over all 4! orderings of the groups, computed exactly by training XGBoost on each of the 2^4 = 16 possible group coalitions. Hyperparameters are tuned separately per coalition. Values are averaged over 5 random seeds; bars sum to the Stage 4 R2 by the efficiency axiom. Note that the Stage 4 R2 values here are estimated from 5 seeds and may differ slightly from the 25-seed estimates in the beeswarm plots above.
+
+![Group Shapley attribution](group_shapley/group_shapley_attribution.png)
+
+---
+
 ## Intermodel feature importance heatmap (Stage 4)
 
 Normalized mean |SHAP| per feature across all models.

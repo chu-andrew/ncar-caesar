@@ -58,12 +58,17 @@ def train_and_explain(
     groups: np.ndarray,
     best_params: dict,
     random_state: int = 0,
+    compute_shap: bool = True,
 ) -> dict:
-    """Train XGBoost on one random split and compute SHAP values on the full dataset.
+    """Train XGBoost across 5 outer CV folds and optionally compute SHAP values.
 
     Each split is 3-way (train / val / test): val is carved from train and used
     solely for early stopping. R^2 is evaluated on the held-out test set across 5
-    outer folds. The model from the first fold is used for SHAP.
+    outer folds. The model from the first fold is used for SHAP (when compute_shap=True).
+
+    When compute_shap=False, only R^2 statistics are returned (no shap_values,
+    X_full, y_full, or residuals keys). Used by group_shapley_attribution.py to evaluate
+    coalition R^2 without the overhead of SHAP computation.
     """
     X = features[columns]
     y = target
@@ -104,27 +109,34 @@ def train_and_explain(
         r2_train_list.append(m_cv.score(X.iloc[tr_idx], y[tr_idx]))
         r2_test_list.append(m_cv.score(X.iloc[test_idx], y[test_idx]))
 
-    model.fit(
-        X.iloc[shap_tr_idx],
-        y[shap_tr_idx],
-        eval_set=[(X.iloc[shap_val_idx], y[shap_val_idx])],
-        verbose=False,
-    )
-    shap_values = shap.TreeExplainer(model)(X)
-    y_pred = model.predict(X).clip(0, 100)
-
-    return {
-        "shap_values": shap_values,
-        "X_full": X,
-        "y_full": y,
+    result = {
         "r2_train_mean": np.mean(r2_train_list),
         "r2_test_mean": np.mean(r2_test_list),
         "r2_train_std": np.std(r2_train_list),
         "r2_test_std": np.std(r2_test_list),
         "feature_names": columns,
-        "residuals": y - y_pred,
         "best_params": best_params,
     }
+
+    if compute_shap:
+        model.fit(
+            X.iloc[shap_tr_idx],
+            y[shap_tr_idx],
+            eval_set=[(X.iloc[shap_val_idx], y[shap_val_idx])],
+            verbose=False,
+        )
+        shap_values = shap.TreeExplainer(model)(X)
+        y_pred = model.predict(X).clip(0, 100)
+        result.update(
+            {
+                "shap_values": shap_values,
+                "X_full": X,
+                "y_full": y,
+                "residuals": y - y_pred,
+            }
+        )
+
+    return result
 
 
 def _aggregate_runs(run_results: list[dict]) -> dict:

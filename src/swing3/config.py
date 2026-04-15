@@ -20,3 +20,18 @@ STAGED_MODELS: list[tuple[str, list[str]]] = [
 def columns_for_stage(groups: list[str]) -> list[str]:
     """Return the flat list of feature column names for the given group keys."""
     return [col for g in groups for col in PREDICTOR_GROUPS[g]]
+
+
+GROUP_COLORS: dict[str, str] = {
+    "thermo": "tab:red",
+    "dynamics": "tab:blue",
+    "clouds": "tab:green",
+    "isotopes": "tab:purple",
+}
+
+GROUP_LABELS: dict[str, str] = {
+    "thermo": "Thermodynamics",
+    "dynamics": "Dynamics",
+    "clouds": "Clouds",
+    "isotopes": "Isotopes",
+}
