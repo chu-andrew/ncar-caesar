@@ -82,6 +82,8 @@ def _load_model_arrays(model: str) -> tuple[dict[str, np.ndarray], np.ndarray]:
             "dD_gradient": dD_ft - dD_bl,
             "dDp": _get(v.dD_precip),
             "dexcessp": _get(v.dexcess_precip),
+            "dDs": _get(v.dD_surface),
+            "dexcesss": _get(v.dexcess_surface),
             "pref": _get(v.precip_efficiency),
         }
 

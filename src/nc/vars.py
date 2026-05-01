@@ -81,6 +81,8 @@ class _Swing3Vars:
     dD_vapor: str = "dD"
     dD_precip: str = "dDp"
     dexcess_precip: str = "dexcessp"
+    dD_surface: str = "dDs"
+    dexcess_surface: str = "dexcesss"
 
 
 @dataclass(frozen=True)

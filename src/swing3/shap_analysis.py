@@ -7,7 +7,7 @@ from scipy.stats import randint, uniform
 from sklearn.model_selection import GroupShuffleSplit, RandomizedSearchCV
 
 from nc.cache import MEMORY
-from swing3.config import STAGED_MODELS, columns_for_stage
+from swing3.config import columns_for_stage, stages_for_model
 from swing3.features import load_shap_features
 
 _PARAM_DIST = {
@@ -132,6 +132,7 @@ def train_and_explain(
                 "shap_values": shap_values,
                 "X_full": X,
                 "y_full": y,
+                "y_pred": y_pred,
                 "residuals": y - y_pred,
             }
         )
@@ -149,6 +150,7 @@ def _aggregate_runs(run_results: list[dict]) -> dict:
         np.mean([np.mean(r["shap_values"].base_values) for r in run_results])
     )
     residuals = np.mean([r["residuals"] for r in run_results], axis=0)
+    y_pred = np.mean([r["y_pred"] for r in run_results], axis=0)
 
     return {
         "shap_values": shap.Explanation(
@@ -159,6 +161,7 @@ def _aggregate_runs(run_results: list[dict]) -> dict:
         ),
         "X_full": first["X_full"],
         "y_full": first["y_full"],
+        "y_pred": y_pred,
         "r2_train_mean": np.mean([r["r2_train_mean"] for r in run_results]),
         "r2_test_mean": np.mean([r["r2_test_mean"] for r in run_results]),
         "r2_train_std": np.std([r["r2_train_mean"] for r in run_results]),
@@ -177,7 +180,7 @@ def run_staged_analysis(model_name: str, n_runs: int = 25) -> dict[str, dict]:
     print(f"\t{model_name}: {len(features):,} samples")
 
     results = {}
-    for stage_name, group_keys in STAGED_MODELS:
+    for stage_name, group_keys in stages_for_model(model_name):
         columns = columns_for_stage(group_keys)
         print(f"\t{stage_name} ({len(columns)} predictors, {n_runs} runs)...")
 
@@ -206,3 +209,72 @@ def run_staged_analysis(model_name: str, n_runs: int = 25) -> dict[str, dict]:
         )
 
     return results
+
+
+@MEMORY.cache
+def run_forward_model(model_name: str, n_runs: int = 25) -> dict:
+    """Stage 4 model with dDp excluded; tests whether dDp drives the attribution."""
+    columns = [c for c in columns_for_stage(["thermo", "dynamics", "clouds", "isotopes"])
+               if c != "dDp"]
+    return _run_isotope_variant(model_name, columns, "dDp excluded", n_runs)
+
+
+def _run_isotope_variant(
+    model_name: str, columns: list[str], label: str, n_runs: int
+) -> dict:
+    """Shared implementation for surface isotope comparison runs."""
+    print(f"Loading features for {model_name}...")
+    features, target, groups = load_shap_features(model_name)
+    print(f"\t{model_name}: {len(features):,} samples, {len(columns)} features ({label})")
+
+    print("\t\tTuning hyperparameters...")
+    best_params = _tune_hyperparameters(features[columns], target, groups)
+
+    run_results = Parallel(n_jobs=-1)(
+        delayed(train_and_explain)(
+            features,
+            target,
+            columns,
+            groups,
+            best_params=best_params,
+            random_state=seed,
+        )
+        for seed in range(n_runs)
+    )
+    result = _aggregate_runs(run_results)
+    print(
+        f"\t\tR² train={result['r2_train_mean']:.3f} (±{result['r2_train_std']:.3f}), "
+        f"test={result['r2_test_mean']:.3f} (±{result['r2_test_std']:.3f})"
+    )
+    return result
+
+
+def _final_stage_groups(model_name: str) -> list[str]:
+    """Return the group keys for this model's final stage."""
+    return stages_for_model(model_name)[-1][1]
+
+
+@MEMORY.cache
+def run_surface_isotopes_added(model_name: str, n_runs: int = 25) -> dict:
+    """Final stage + dDs + dexcesss added to isotope group (Case A).
+
+    Tests whether surface vapor isotopes add predictive skill on top of the
+    existing isotope features (dD_gradient, dDp, dexcessp). Uses model-specific
+    final stage groups (e.g. CAM5 excludes clouds).
+    """
+    base_cols = columns_for_stage(_final_stage_groups(model_name))
+    columns = base_cols + ["dDs", "dexcesss"]
+    return _run_isotope_variant(model_name, columns, "+dDs+dexcesss", n_runs)
+
+
+@MEMORY.cache
+def run_surface_isotopes_replace(model_name: str, n_runs: int = 25) -> dict:
+    """Final stage with dDp replaced by dDs + dexcesss (Case B).
+
+    Tests whether forward-only surface vapor isotopes (dDs, dexcesss) can
+    substitute for the potentially circular dDp without loss of predictive skill.
+    Uses model-specific final stage groups (e.g. CAM5 excludes clouds).
+    """
+    base_cols = columns_for_stage(_final_stage_groups(model_name))
+    columns = [c for c in base_cols if c != "dDp"] + ["dDs", "dexcesss"]
+    return _run_isotope_variant(model_name, columns, "dDp→dDs+dexcesss", n_runs)
