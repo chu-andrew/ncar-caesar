@@ -33,6 +33,54 @@ Each bar shows the fraction of Stage 4 R2 attributed to each predictor group (th
 
 ![Group Shapley attribution](group_shapley/group_shapley_attribution.png)
 
+The heatmap below shows each group's Shapley value as a fraction of Stage 4 R2, with the dominant group per model highlighted.
+
+![Group Shapley fraction heatmap](group_shapley/group_fraction_heatmap.png)
+
+Thermodynamics is the dominant predictor group in all seven models, accounting for 39–68% of Stage 4 R2. This is consistent across models despite substantial differences in absolute R2 (0.65–0.78) and in the relative contributions of dynamics, clouds, and isotopes.
+
+| Model | Dominant group | Fraction | Stage 4 R2 |
+|-------|---------------|----------|------------|
+| CAM5  | Thermodynamics | 0.548 | 0.650 |
+| CAM6  | Thermodynamics | 0.681 | 0.686 |
+| ECHAM | Thermodynamics | 0.387 | 0.657 |
+| GISS  | Thermodynamics | 0.547 | 0.642 |
+| GSM   | Thermodynamics | 0.441 | 0.777 |
+| LMDZ  | Thermodynamics | 0.455 | 0.648 |
+| MIROC | Thermodynamics | 0.560 | 0.723 |
+
+### Sensitivity: dDp excluded from isotope group
+
+To test whether the backward feature dDp (precipitation isotope ratio, which is co-determined with PE) drives the isotope group attribution, we re-ran the group Shapley computation with dDp removed, retaining only dD_gradient and dexcessp. If the isotope Shapley value drops substantially without dDp, it suggests dDp was carrying variance that is mechanistically circular. The table below compares isotope group Shapley values with and without dDp, alongside the full-coalition Stage 4 R2 for the no-dDp run.
+
+| Model | Isotopes (full) | Isotopes (no dDp) | Delta | Stage 4 R2 (no dDp) |
+|-------|-----------------|-------------------|-------|----------------------|
+| CAM5  | 0.119 ± 0.006   | 0.043 ± 0.003     | −0.076 | 0.627               |
+| CAM6  | 0.114 ± 0.005   | 0.089 ± 0.005     | −0.025 | 0.676               |
+| ECHAM | 0.150 ± 0.004   | 0.086 ± 0.002     | −0.064 | 0.618               |
+| GISS  | 0.160 ± 0.005   | 0.101 ± 0.007     | −0.059 | 0.617               |
+| GSM   | 0.182 ± 0.007   | 0.121 ± 0.006     | −0.061 | 0.748               |
+| LMDZ  | 0.117 ± 0.003   | 0.058 ± 0.001     | −0.059 | 0.627               |
+| MIROC | 0.114 ± 0.004   | 0.077 ± 0.003     | −0.037 | 0.721               |
+
+Removing dDp reduces the isotope Shapley value by 0.025–0.076 across models (median −0.059), confirming that dDp carries a meaningful share of the isotope group's marginal R2. However, even without dDp the isotope group retains a positive attribution (0.043–0.121) in every model, indicating that dD_gradient and dexcessp provide independent predictive signal beyond what thermodynamics, dynamics, and clouds capture. The reduction in Stage 4 R2 (full minus no-dDp, implied by the group Shapley sums) is consistent with dDp contributing real variance, though the physical interpretation of that contribution warrants caution.
+
+### Forward model: Stage 4 with dDp excluded
+
+As a complementary test, we trained the full Stage 4 XGBoost model (25 seeds, same CV design) with dDp removed and compared test R2 to the full Stage 4 model. A small delta confirms that dDp is not the primary driver of the Stage 4 predictions.
+
+| Model | Stage 4 R2 | No-dDp R2 | Delta |
+|-------|------------|-----------|-------|
+| CAM5  | 0.646      | 0.624     | −0.021 |
+| CAM6  | 0.680      | 0.674     | −0.006 |
+| ECHAM | 0.649      | 0.617     | −0.031 |
+| GISS  | 0.639      | 0.617     | −0.022 |
+| GSM   | 0.774      | 0.751     | −0.023 |
+| LMDZ  | 0.645      | 0.625     | −0.020 |
+| MIROC | 0.719      | 0.713     | −0.006 |
+
+The median R2 drop is 0.021, ranging from 0.006 (CAM6, MIROC) to 0.031 (ECHAM). This is modest relative to the full Stage 4 R2 (0.64–0.77), suggesting the model's predictive skill is not contingent on dDp. The residual isotope skill (from dD_gradient and dexcessp) is therefore not an artifact of circular reasoning through dDp.
+
 ---
 
 ## Isotope-only beeswarm plots
@@ -77,6 +125,42 @@ Each figure shows SHAP values for a model trained on only the three isotope pred
 Normalized mean |SHAP| per feature across all models.
 
 ![Intermodel heatmap](intermodel_heatmap.png)
+
+---
+
+## Within-group feature importance (Stage 4)
+
+Mean |SHAP| per feature within each predictor group, broken out by model. Shows which variables are load-bearing vs. redundant within each group.
+
+![Within-group importance](within_group_importance.png)
+
+---
+
+## Feature direction consistency across models (Stage 4)
+
+For each feature, the sign of its SHAP effect on PE: + means high feature values increase PE, − means they decrease PE, ? means the direction could not be determined (too many NaN values). Direction is computed as the sign of the Spearman correlation between feature values and SHAP values. **Bold / NO*** indicates the direction is inconsistent across models.
+
+| Feature | Group | CAM5 | CAM6 | ECHAM | GISS | GSM | LMDZ | MIROC | Consistent |
+|---------|-------|------|------|-------|------|-----|------|-------|------------|
+| mcao | thermo | + | − | + | + | + | + | + | NO * |
+| sh | thermo | + | + | + | + | + | + | + | YES |
+| qvsum | thermo | − | − | − | + | − | − | − | NO * |
+| q_700 | thermo | + | + | + | + | + | + | + | YES |
+| t_700 | thermo | − | − | − | − | − | − | − | YES |
+| ts | thermo | + | + | + | + | + | + | + | YES |
+| wind_sfc | dynamics | + | + | + | + | + | + | + | YES |
+| iuq | dynamics | + | + | + | + | + | + | + | YES |
+| ivq | dynamics | + | + | − | + | + | + | + | NO * |
+| omega_925 | dynamics | + | + | + | + | + | + | + | YES |
+| omega_700 | dynamics | − | − | − | − | − | − | − | YES |
+| low_cloud | clouds | ? | + | + | − | + | + | + | NO * |
+| dD_gradient | isotopes | − | − | − | − | − | + | + | NO * |
+| dDp | isotopes | − | − | − | − | − | − | − | YES |
+| dexcessp | isotopes | − | + | − | − | + | − | − | NO * |
+
+![Direction heatmap](direction_heatmap.png)
+
+Notable inconsistencies: mcao is negative in CAM6 only (opposite to all others); qvsum is positive in GISS only; dD_gradient flips sign in LMDZ and MIROC; dexcessp is inconsistent in 5 of 7 models. The universally negative direction of dDp (− in all 7 models) is consistent with dDp acting as a proxy for heavy precipitation events, which dilute PE.
 
 ---
 

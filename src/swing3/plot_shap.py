@@ -11,9 +11,15 @@ import shap
 from nc.loader import PROJECT_ROOT
 from swing3.config import (
     MODELS,
+    PREDICTOR_GROUPS,
     STAGED_MODELS,
 )
-from swing3.shap_analysis import run_staged_analysis
+from swing3.shap_analysis import (
+    run_forward_model,
+    run_staged_analysis,
+    run_surface_isotopes_added,
+    run_surface_isotopes_replace,
+)
 
 SHAP_PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots/shap")
 
@@ -109,15 +115,15 @@ def plot_intermodel_heatmap(all_results: dict[str, dict]) -> None:
 def plot_mcao_dependence(all_results: dict[str, dict]) -> None:
     model_names = list(all_results.keys())
     n_cols = 4
-    n_rows = (len(model_names) + n_cols - 1) // n_cols
     norm = mcolors.Normalize(vmin=0, vmax=100)
     cmap = shap.plots.colors.red_blue
 
     for stage_idx, (stage_name, _) in enumerate(STAGED_MODELS, start=1):
-        # Collect per-model data for this stage
         plot_data = []
         all_mcao_vals, all_shap_vals = [], []
         for model_name in model_names:
+            if stage_name not in all_results[model_name]:
+                continue
             result = all_results[model_name][stage_name]
             sv = result["shap_values"]
             X_full = result["X_full"]
@@ -137,9 +143,14 @@ def plot_mcao_dependence(all_results: dict[str, dict]) -> None:
             all_shap_vals.append(mcao_shap)
             plot_data.append((model_name, mcao_x, mcao_shap, cloud))
 
+        if not plot_data:
+            continue
+
         x_lo, x_hi = np.percentile(np.concatenate(all_mcao_vals), [0, 100])
         y_lo, y_hi = np.percentile(np.concatenate(all_shap_vals), [0, 100])
 
+        n_panels = len(plot_data)
+        n_rows = (n_panels + n_cols - 1) // n_cols
         fig, axes = plt.subplots(
             n_rows,
             n_cols,
@@ -192,7 +203,7 @@ def plot_mcao_dependence(all_results: dict[str, dict]) -> None:
             if col == 0:
                 ax.set_ylabel("SHAP value for MCAO", fontsize=12)
 
-        for idx in range(len(model_names), n_rows * n_cols):
+        for idx in range(n_panels, n_rows * n_cols):
             axes_flat[idx].set_visible(False)
 
         if sc_mappable is not None:

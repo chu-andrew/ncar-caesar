@@ -6,7 +6,7 @@ from joblib import Parallel, delayed
 
 from nc.cache import MEMORY
 from nc.loader import PROJECT_ROOT
-from swing3.config import MODELS, PREDICTOR_GROUPS, STAGED_MODELS
+from swing3.config import MODELS, PREDICTOR_GROUPS
 from swing3.features import load_shap_features
 from swing3.shap_analysis import (
     _aggregate_runs,
@@ -53,19 +53,22 @@ def run_isotope_only_analysis(model_name: str, n_runs: int = 25) -> dict:
 def print_comparison_table(
     all_staged: dict[str, dict], all_isotope: dict[str, dict]
 ) -> None:
-    """Print isotope-only R2 alongside Stage 3 and Stage 4 R2 for each model."""
-    stage_3 = STAGED_MODELS[2][0]
-    stage_4 = STAGED_MODELS[3][0]
+    """Print isotope-only R2 alongside the penultimate and final staged R2 per model.
 
-    header = f"{'Model':<10}  {'Isotope-only':>12}  {'Stage 3':>8}  {'Stage 4':>8}  {'Delta (3->4)':>13}"
+    The penultimate stage is the last stage before isotopes were added; the final
+    stage is the full model including isotopes. For models without a clouds stage
+    (e.g. CAM5) these will differ from other models.
+    """
+    header = f"{'Model':<10}  {'Isotope-only':>12}  {'Pre-isotope':>12}  {'Final':>8}  {'Delta':>8}"
     print(header)
     print("-" * len(header))
     for model_name in MODELS:
+        stage_keys = list(all_staged[model_name].keys())
         iso = all_isotope[model_name]["r2_test_mean"]
-        s3 = all_staged[model_name][stage_3]["r2_test_mean"]
-        s4 = all_staged[model_name][stage_4]["r2_test_mean"]
+        s_pre = all_staged[model_name][stage_keys[-2]]["r2_test_mean"]
+        s_final = all_staged[model_name][stage_keys[-1]]["r2_test_mean"]
         print(
-            f"{model_name:<10}  {iso:>12.3f}  {s3:>8.3f}  {s4:>8.3f}  {s4 - s3:>13.3f}"
+            f"{model_name:<10}  {iso:>12.3f}  {s_pre:>12.3f}  {s_final:>8.3f}  {s_final - s_pre:>+8.3f}"
         )
 
 

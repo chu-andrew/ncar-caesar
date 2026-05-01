@@ -5,6 +5,7 @@ description = "CAESAR"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    # uv pip install -e . to add nc
     "cartopy>=0.25.0",
     "cdo>=1.6.1",
     "dotenv>=0.9.9",
