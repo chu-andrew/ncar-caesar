@@ -132,7 +132,6 @@ def train_and_explain(
                 "shap_values": shap_values,
                 "X_full": X,
                 "y_full": y,
-                "y_pred": y_pred,
                 "residuals": y - y_pred,
             }
         )
@@ -150,7 +149,6 @@ def _aggregate_runs(run_results: list[dict]) -> dict:
         np.mean([np.mean(r["shap_values"].base_values) for r in run_results])
     )
     residuals = np.mean([r["residuals"] for r in run_results], axis=0)
-    y_pred = np.mean([r["y_pred"] for r in run_results], axis=0)
 
     return {
         "shap_values": shap.Explanation(
@@ -161,7 +159,6 @@ def _aggregate_runs(run_results: list[dict]) -> dict:
         ),
         "X_full": first["X_full"],
         "y_full": first["y_full"],
-        "y_pred": y_pred,
         "r2_train_mean": np.mean([r["r2_train_mean"] for r in run_results]),
         "r2_test_mean": np.mean([r["r2_test_mean"] for r in run_results]),
         "r2_train_std": np.std([r["r2_train_mean"] for r in run_results]),
@@ -252,6 +249,85 @@ def _run_isotope_variant(
 def _final_stage_groups(model_name: str) -> list[str]:
     """Return the group keys for this model's final stage."""
     return stages_for_model(model_name)[-1][1]
+
+
+def _collect_oos_predictions(
+    X: pd.DataFrame,
+    y: np.ndarray,
+    groups: np.ndarray,
+    best_params: dict,
+    random_state: int = 0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Run 5-fold CV and return (pred_sum, pred_count) for all points.
+
+    Returns raw accumulators rather than a divided array so the caller can
+    aggregate across seeds before dividing, avoiding bias from points that
+    happen to fall outside all test folds in a given seed.
+    """
+    model = xgb.XGBRegressor(
+        n_estimators=500,
+        tree_method="hist",
+        random_state=random_state,
+        early_stopping_rounds=20,
+        **best_params,
+    )
+    outer_gss = GroupShuffleSplit(n_splits=5, test_size=0.3, random_state=random_state)
+    inner_gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=random_state)
+
+    pred_sum = np.zeros(len(y))
+    pred_count = np.zeros(len(y))
+
+    for outer_train_idx, test_idx in outer_gss.split(X, y, groups):
+        inner_tr, inner_val = next(
+            inner_gss.split(
+                X.iloc[outer_train_idx], y[outer_train_idx], groups[outer_train_idx]
+            )
+        )
+        tr_idx = outer_train_idx[inner_tr]
+        val_idx = outer_train_idx[inner_val]
+        m = xgb.XGBRegressor(**model.get_params())
+        m.fit(
+            X.iloc[tr_idx],
+            y[tr_idx],
+            eval_set=[(X.iloc[val_idx], y[val_idx])],
+            verbose=False,
+        )
+        pred_sum[test_idx] += m.predict(X.iloc[test_idx])
+        pred_count[test_idx] += 1
+
+    return pred_sum, pred_count
+
+
+@MEMORY.cache
+def run_staged_oos_predictions(model_name: str, n_runs: int = 25) -> dict[str, dict]:
+    """OOS predictions for each stage, averaged over n_runs seeds.
+
+    Separate from run_staged_analysis so the SHAP cache is not disturbed.
+    Returns: stage_name → {"y_true": ..., "y_oos_pred": ...}
+    """
+    features, target, groups = load_shap_features(model_name)
+
+    results = {}
+    for stage_name, group_keys in stages_for_model(model_name):
+        columns = columns_for_stage(group_keys)
+        print(f"\t[{model_name}] {stage_name}: tuning + {n_runs} OOS seeds...")
+        best_params = _tune_hyperparameters(features[columns], target, groups)
+
+        seed_accumulators = Parallel(n_jobs=-1)(
+            delayed(_collect_oos_predictions)(
+                features[columns], target, groups, best_params, seed
+            )
+            for seed in range(n_runs)
+        )
+        total_sum = np.sum([s for s, _ in seed_accumulators], axis=0)
+        total_count = np.sum([c for _, c in seed_accumulators], axis=0)
+        y_oos_pred = (total_sum / np.maximum(total_count, 1)).clip(0, 100)
+        results[stage_name] = {
+            "y_true": target,
+            "y_oos_pred": y_oos_pred,
+        }
+
+    return results
 
 
 @MEMORY.cache
