@@ -148,3 +148,33 @@ def load_shap_features(model: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray
 
     features = pd.DataFrame({k: arr[mask] for k, arr in feature_arrays.items()})
     return features.reset_index(drop=True), target[mask], time_groups[mask]
+
+
+def load_predict_features(
+    model: str,
+) -> tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray]:
+    """Like load_shap_features but also returns a per-sample year array.
+
+    Returns: (features_df, target, time_groups, years)
+    years: integer array of shape (n_samples,), one calendar year per sample.
+    Reconstruction assumes JFMA selection starting 1979-01-01 with no gaps:
+      year = 1979 + (jfma_time_index // 4)
+    """
+    arrays, time_groups = _load_model_arrays(model)
+
+    target = arrays["pref"]
+    feature_arrays = {k: arr for k, arr in arrays.items() if k != "pref"}
+
+    valid_pe = np.isfinite(target)
+    retained_pe = valid_pe & (target >= 0) & (target <= 100)
+
+    nan_ok = {"low_cloud", "omega_925"}
+    mask = retained_pe
+    for col, arr in feature_arrays.items():
+        if col not in nan_ok:
+            mask &= np.isfinite(arr)
+
+    years = (1979 + time_groups // 4).astype(int)
+
+    features = pd.DataFrame({k: arr[mask] for k, arr in feature_arrays.items()})
+    return features.reset_index(drop=True), target[mask], time_groups[mask], years[mask]
