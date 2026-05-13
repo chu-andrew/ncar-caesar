@@ -21,7 +21,7 @@ JFMA = frozenset({1, 2, 3, 4})
 
 
 def jfma_indices(n_times: int) -> np.ndarray:
-    """Indices of Jan–Apr months in a monthly series of length n_times starting 1979-01-01."""
+    """Indices of Jan-Apr months in a monthly series of length n_times starting 1979-01-01."""
     dates = pd.date_range("1979-01-01", periods=n_times, freq="MS")
     return np.where(dates.month.isin(JFMA))[0]
 
@@ -36,11 +36,17 @@ class HexVar(NamedTuple):
 
 
 HEX_VARS = [
-    HexVar("dDp_median", "dDp", r"Median $\delta D$ precipitation (‰)", "median", None),
+    HexVar(
+        "dDp_median",
+        "dDp",
+        r"Median $\delta D$ precipitation (per mil)",
+        "median",
+        None,
+    ),
     HexVar(
         "dexcessp_median",
         "dexcessp",
-        r"Median d-excess precipitation (‰)",
+        r"Median d-excess precipitation (per mil)",
         "median",
         None,
     ),
@@ -48,10 +54,18 @@ HEX_VARS = [
         "sh_median", "sh", r"Median surface specific humidity (kg/kg)", "median", None
     ),
     HexVar(
-        "dD_ft_mean", "dD", r"Mean $\delta D$ vapor 600-800 hPa (‰)", "mean", (600, 800)
+        "dD_ft_mean",
+        "dD",
+        r"Mean $\delta D$ vapor 600-800 hPa (per mil)",
+        "mean",
+        (600, 800),
     ),
     HexVar(
-        "dD_bl_mean", "dD", r"Mean $\delta D$ vapor 800-925 hPa (‰)", "mean", (800, 925)
+        "dD_bl_mean",
+        "dD",
+        r"Mean $\delta D$ vapor 800-925 hPa (per mil)",
+        "mean",
+        (800, 925),
     ),
     HexVar("pr_mean", "pr", r"Mean surface precipitation rate (mm/day)", "mean", None),
     HexVar("ev_mean", "ev", r"Mean surface evaporation rate (mm/day)", "mean", None),

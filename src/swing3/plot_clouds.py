@@ -12,7 +12,7 @@ from swing3.clouds import (
 )
 from swing3.plot_mcao_pe_map import setup_map
 
-PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots/clouds")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/swing3/plots/clouds")
 
 
 def _plot_cloud_clim(loader, title: str, out_filename: str) -> None:
@@ -71,12 +71,12 @@ def _plot_cloud_clim(loader, title: str, out_filename: str) -> None:
 def main() -> None:
     _plot_cloud_clim(
         load_low_cloud_clim,
-        "WisoMIP Mean Low Cloud Fraction (Jan–Apr, 1979–2023)",
+        "WisoMIP Mean Low Cloud Fraction (Jan-Apr, 1979-2023)",
         "low_cloud_clim_map.png",
     )
     _plot_cloud_clim(
         load_low_cloud_clim_t42,
-        "WisoMIP Mean Low Cloud Fraction on T42 Grid (Jan–Apr, 1979–2023)",
+        "WisoMIP Mean Low Cloud Fraction on T42 Grid (Jan-Apr, 1979-2023)",
         "low_cloud_clim_map_t42.png",
     )
 

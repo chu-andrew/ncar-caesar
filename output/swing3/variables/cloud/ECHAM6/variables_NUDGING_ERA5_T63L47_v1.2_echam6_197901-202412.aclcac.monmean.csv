@@ -1,0 +1,6 @@
+variable,long_name,units
+aclcac,cloud cover,""
+time,"",hours since 1979-1-31 23:52:00
+lon,longitude,degrees_east
+lat,latitude,degrees_north
+plev,pressure,Pa

@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from nc.remote import SWING3_DATA
-
 
 @dataclass(frozen=True)
 class _Ds638001Vars:

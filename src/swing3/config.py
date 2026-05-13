@@ -1,12 +1,21 @@
+from dataclasses import dataclass
+
 from nc.remote import SWING3_MODELS
 
 MODELS = list(SWING3_MODELS.keys())
 
+# Isotope feature lists used across the pipeline.
+# full:   all five isotope predictors -- Stage 4 and subgroup analysis
+# no_ddp: full minus dDp -- circularity-test and forward selection
+#         (dDp is co-determined with PE and excluded from attribution experiments)
+ISOTOPE_EXTENDED: list[str] = ["dD_gradient", "dDp", "dexcessp", "dDs", "dexcesss"]
+ISOTOPE_NO_DDP: list[str] = ["dD_gradient", "dexcessp", "dDs", "dexcesss"]
+
 PREDICTOR_GROUPS: dict[str, list[str]] = {
     "thermo": ["mcao", "sh", "qvsum", "q_700", "t_700", "ts"],
-    "dynamics": ["wind_sfc", "iuq", "ivq", "omega_925", "omega_700"],
+    "dynamics": ["wind_sfc", "ivt", "omega_925", "omega_700"],
     "clouds": ["low_cloud"],
-    "isotopes": ["dD_gradient", "dDp", "dexcessp"],
+    "isotopes": ISOTOPE_EXTENDED,
 }
 
 STAGED_MODELS: list[tuple[str, list[str]]] = [
@@ -61,26 +70,20 @@ GROUP_LABELS: dict[str, str] = {
     "isotopes": "Isotopes",
 }
 
-# Data source classification for each predictor variable.
-# satellite     - retrievable from passive/active remote sensing
-# reanalysis    - requires data assimilation or model-derived fields
-# isotope_model - isotope-enabled model output; not directly observable
-VARIABLE_DATA_SOURCES: dict[str, str] = {
-    "low_cloud": "satellite",
-    "ts": "satellite",
-    "qvsum": "satellite",
-    "q_700": "satellite",
-    "t_700": "satellite",
-    "mcao": "reanalysis",
-    "sh": "reanalysis",
-    "wind_sfc": "reanalysis",
-    "iuq": "reanalysis",
-    "ivq": "reanalysis",
-    "omega_925": "reanalysis",
-    "omega_700": "reanalysis",
-    "dD_gradient": "isotope_model",
-    "dDp": "isotope_model",
-    "dexcessp": "isotope_model",
-    "dDs": "isotope_model",
-    "dexcesss": "isotope_model",
-}
+
+@dataclass(frozen=True)
+class ExperimentConfig:
+    n_seeds: int = 10
+    n_folds: int = 5
+    n_optuna_trials: int = 20
+    early_stopping_rounds: int = 20
+    n_estimators: int = 500
+    temporal_cutoff: int = 2012
+    # hparam_val_size: used only for the Optuna HPO inner CV (3 folds, 30% test each).
+    # The early stopping split is separate and hardcoded at 0.2 in train_and_explain.
+    hparam_val_size: float = 0.3
+    pe_min: float = 0.0
+    pe_max: float = 100.0
+
+
+DEFAULT_CFG = ExperimentConfig()

@@ -1,0 +1,8 @@
+variable,long_name,units
+tcdcclm,** atmos column Total cloud cover [%],""
+tcdclcl,** low cloud level Total cloud cover [%],""
+tcdcmcl,** mid-cloud level Total cloud cover [%],""
+tcdchcl,** high cloud level Total cloud cover [%],""
+time,"",months since 1979-1-15 00:00:00
+lon,longitude,degrees_east
+lat,latitude,degrees_north

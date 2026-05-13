@@ -77,8 +77,7 @@ def _load_model_arrays(model: str) -> tuple[dict[str, np.ndarray], np.ndarray]:
             )
             .to("m/s")
             .magnitude,
-            "iuq": _get(v.moisture_flux_u),
-            "ivq": _get(v.moisture_flux_v),
+            "ivt": np.sqrt(_get(v.moisture_flux_u) ** 2 + _get(v.moisture_flux_v) ** 2),
             "dD_gradient": dD_ft - dD_bl,
             "dDp": _get(v.dD_precip),
             "dexcessp": _get(v.dexcess_precip),
@@ -94,12 +93,10 @@ def _load_model_arrays(model: str) -> tuple[dict[str, np.ndarray], np.ndarray]:
         .copy()
     )
 
-    # TODO: verify time ranges for omega
     omega = load_omega(model, n_times=n_min)
     raw["omega_925"] = omega.sel(p=P_925).values
     raw["omega_700"] = omega.sel(p=P_700).values
 
-    # TODO: verify time ranges for low cloud
     low_cloud = load_low_cloud_t42(model)
     assert low_cloud.size >= mcao.size, (
         f"[{model}] low_cloud ({low_cloud.size} elements) is smaller than "
@@ -148,6 +145,40 @@ def load_shap_features(model: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray
 
     features = pd.DataFrame({k: arr[mask] for k, arr in feature_arrays.items()})
     return features.reset_index(drop=True), target[mask], time_groups[mask]
+
+
+@MEMORY.cache
+def load_grid_coords(model: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return (lat, lon, bool_mask) for the CAESAR-cropped model grid.
+
+    bool_mask is shape (n_jfma * n_lat * n_lon,) -- True for samples retained
+    by load_shap_features.  Used to place per-sample arrays back onto the grid.
+    """
+    sst_da = load_sst()
+    time_dim = v_lmdz.time if model == "LMDZ" else v.time
+    n_sst = sst_da.sizes[v_sst.time]
+
+    with open_file(SWING3_MODELS[model], decode_times=False) as ds:
+        n_times = ds.sizes[time_dim]
+        n_min = min(n_times, n_sst)
+        jfma = jfma_indices(n_min)
+        pe_da = crop_region(ds[v.precip_efficiency].isel({time_dim: jfma}))
+        lat = pe_da["lat"].values.copy()
+        lon = pe_da["lon"].values.copy()
+
+    arrays, _ = _load_model_arrays(model)
+    target = arrays["pref"]
+    feature_arrays = {k: arr for k, arr in arrays.items() if k != "pref"}
+
+    valid_pe = np.isfinite(target)
+    retained_pe = valid_pe & (target >= 0) & (target <= 100)
+    nan_ok = {"low_cloud", "omega_925"}
+    mask = retained_pe.copy()
+    for col, arr in feature_arrays.items():
+        if col not in nan_ok:
+            mask &= np.isfinite(arr)
+
+    return lat, lon, mask
 
 
 def load_predict_features(

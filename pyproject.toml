@@ -19,7 +19,9 @@ dependencies = [
     "seaborn>=0.13.2",
     "shap>=0.51.0",
     "xarray>=2026.2.0",
+    "optuna>=4.0.0",
     "xgboost>=3.2.0",
+    "snakemake>=9.19.0",
 ]
 
 [dependency-groups]

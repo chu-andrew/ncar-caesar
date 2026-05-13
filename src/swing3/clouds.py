@@ -14,9 +14,17 @@ from nc.vars import SWING3 as v
 from nc.vars import SWING3_LMDZ as v_lmdz
 from swing3.models import crop_region, JFMA
 
-CDO = Cdo()
-
 MODELS = list(SWING3_MODELS.keys())
+
+_cdo: Cdo | None = None
+
+
+def _get_cdo() -> Cdo:
+    global _cdo
+    if _cdo is None:
+        _cdo = Cdo()
+    return _cdo
+
 
 START_YEAR = 1979
 END_YEAR = 2023
@@ -44,7 +52,7 @@ CLOUD_VAR_MAP: dict[str, CloudSpec] = {
 @MEMORY.cache
 def load_low_cloud(model: str) -> xr.DataArray:
     """
-    Load JFMA low-cloud fraction for the given model, 1979–2023, on its native grid.
+    Load JFMA low-cloud fraction for the given model, 1979-2023, on its native grid.
 
     Returns an xr.DataArray (time, lat, lon) in percent (0-100) cropped to
     CAESAR_BOUNDS.  Returns an all-NaN DataArray if cloud data is unavailable.
@@ -119,7 +127,7 @@ def load_low_cloud_t42(model: str) -> xr.DataArray:
         da.to_netcdf(in_file)
         with open(grid_file, "w") as f:
             f.write(_cdo_grid_desc(lat_t42, lon_t42))
-        return CDO.remapcon(grid_file, input=in_file, returnXArray="cld")
+        return _get_cdo().remapcon(grid_file, input=in_file, returnXArray="cld")
 
 
 def load_low_cloud_clim_t42(model: str) -> xr.DataArray:

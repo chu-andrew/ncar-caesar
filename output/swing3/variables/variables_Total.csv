@@ -1,0 +1,33 @@
+variable,long_name,units
+ev,Evaporation (surface),mm/day
+d18Oe,Delta of evaporation,‰
+dDe,Delta of evaporation,‰
+dexcesse,Delta of evaporation,‰
+ps,Pressure (surface),hPa
+ts,Temperature (surface),deg C
+qvsum,Atmospheric column precipitable water,kg/m^2
+d18Ow,Delta of vertically integrated water vapor,‰
+dDw,Delta of vertically integrated water vapor,‰
+dexcessw,Delta of vertically integrated water vapor,‰
+iuq,Vertically integrated moisture u-flux,kg/m/s
+ivq,Vertically integrated moisture v-flux,kg/m/s
+t,Temperature (pressure level),deg C
+u,u-wind (pressure level),m/s
+v,v-wind (pressure level),m/s
+q,Specific humidity (pressure level),kg/kg
+pr,Precipitation (surface),mm/day
+d18O,Delta of specific humidity (pressure level),‰
+dD,Delta of specific humidity (pressure level),‰
+dexcess,Delta of specific humidity (pressure level),‰
+pref,Precipitation efficiency,%
+d18Op,Delta of precipitation,‰
+dDp,Delta of precipitation,‰
+dexcessp,Delta of precipitation,‰
+sh,Specific humidity (surface),kg/kg
+d18Os,Delta of specific humidity (surface),‰
+dDs,Delta of specific humidity (surface),‰
+dexcesss,Delta of specific humidity (surface),‰
+time_counter,Time axis,months since 1979-1-15 00:00:00
+lon,longitude,degrees_east
+lat,latitude,degrees_north
+p,pressure,mb

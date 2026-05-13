@@ -13,7 +13,7 @@ from swing3.models import load_mcao_pe_clim
 from swing3.sst import load_sst
 from nc.vars import SWING3 as v_swing3
 
-PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/swing3/plots/mcao_pe")
 MODELS = list(SWING3_MODELS.keys())
 
 
@@ -66,7 +66,7 @@ def make_figure(
         subplot_kw={"projection": proj},
     )
     fig.suptitle(
-        f"WisoMIP Mean {title} (Jan–Apr)",
+        f"WisoMIP Mean {title} (Jan-Apr)",
         fontsize=18,
     )
 
@@ -104,7 +104,7 @@ def main() -> None:
         mcao_clim, pe_clim = load_mcao_pe_clim(model, sst_da=sst_da)
         all_data[model] = (mcao_clim, pe_clim)
 
-    # shared color limits from all models (1st–99th percentile)
+    # shared color limits from all models (1st-99th percentile)
     all_mcao = np.stack([d[0].values for d in all_data.values()])
     all_pe = np.stack([d[1].values for d in all_data.values()])
 

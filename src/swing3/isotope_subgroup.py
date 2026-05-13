@@ -1,3 +1,4 @@
+import logging
 import os
 from itertools import combinations
 
@@ -7,16 +8,19 @@ from joblib import Parallel, delayed
 
 from nc.cache import MEMORY
 from nc.loader import PROJECT_ROOT
-from swing3.config import MODELS, PREDICTOR_GROUPS
+from swing3.config import ISOTOPE_EXTENDED, MODELS
 from swing3.features import load_shap_features
 from swing3.group_shapley_attribution import _coalition_r2, _shapley_from_coalition_r2
 from swing3.shap_analysis import _tune_hyperparameters
+from swing3.types import IsotopeSubgroupResult
 
-PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots/shap/isotope_subgroup")
+logger = logging.getLogger(__name__)
 
-_ISOTOPE_FEATURES = PREDICTOR_GROUPS["isotopes"] + ["dDs", "dexcesss"]
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/swing3/plots/isotope_subgroup")
 
-_FEATURE_COLORS = {
+_ISOTOPE_FEATURES: list[str] = ISOTOPE_EXTENDED
+
+_FEATURE_COLORS: dict[str, str] = {
     "dD_gradient": "#7b2d8b",
     "dDp": "#c06dc8",
     "dexcessp": "#e0b0e8",
@@ -26,50 +30,54 @@ _FEATURE_COLORS = {
 
 
 @MEMORY.cache
-def run_isotope_subgroup_shapley(model_name: str, n_seeds: int = 5) -> dict:
-    """
-    Compute Shapley values for each isotope feature within the isotope group.
+def run_isotope_subgroup_shapley(
+    model_name: str,
+    n_seeds: int = 10,
+) -> IsotopeSubgroupResult:
+    """Compute Shapley values for each isotope feature within the isotope group.
 
-    Treats each of {dD_gradient, dDp, dexcessp} as a player. The Shapley values
-    sum to the isotope-only R2 (efficiency axiom). Hyperparameters are tuned once
-    on the full 3-feature isotope set; all 2^3 = 8 coalitions are evaluated.
-
-    Returns a dict with keys:
-      shapley      : mean Shapley value per feature
-      shapley_std  : std across seeds
-      coalition_r2 : mean R2 per coalition
-      isotope_r2   : R2 of the full isotope model (all 3 features)
+    Treats each of {dD_gradient, dDp, dexcessp, dDs, dexcesss} as a player in an
+    isotope-only model. The Shapley values sum to the isotope-only R^2 (efficiency axiom).
+    Hyperparameters are tuned once on the full 5-feature isotope set; all 2^5 = 32
+    coalitions are evaluated.
     """
-    print(f"Loading features for {model_name}...")
+    logger.info("Loading features for %s...", model_name)
     features, target, groups = load_shap_features(model_name)
 
-    feature_names = list(_ISOTOPE_FEATURES)  # dD_gradient, dDp, dexcessp, dDs, dexcesss
+    feature_names = list(_ISOTOPE_FEATURES)
     n = len(feature_names)
 
-    all_coalitions = [
+    all_coalitions: list[frozenset[str]] = [
         frozenset(c)
         for size in range(1, n + 1)
         for c in combinations(feature_names, size)
     ]
 
-    print(f"\tTuning on full isotope feature set...")
+    logger.info("\tTuning on full isotope feature set...")
     best_params = _tune_hyperparameters(
         features[feature_names], target, groups, random_state=10
     )
 
-    print(f"\tEvaluating {2**n} coalitions ({n_seeds} seeds each)...")
-    coalition_r2_seeds: dict[frozenset, list[float]] = {frozenset(): [0.0] * n_seeds}
+    logger.info("\tEvaluating %d coalitions (%d seeds each)...", 2**n, n_seeds)
+    coalition_r2_seeds: dict[frozenset[str], list[float]] = {
+        frozenset(): [0.0] * n_seeds
+    }
 
     for coalition in all_coalitions:
         cols = sorted(coalition)
-        r2_seeds: list[float] = Parallel(n_jobs=-1)(
+        r2_seeds: list[float] = Parallel(n_jobs=-1)(  # type: ignore[assignment]
             delayed(_coalition_r2)(features, target, cols, groups, best_params, seed)
             for seed in range(n_seeds)
         )
         coalition_r2_seeds[frozenset(coalition)] = r2_seeds
-        print(f"\t\t{set(coalition)}: R2 = {np.mean(r2_seeds):.3f} +- {np.std(r2_seeds):.3f}")
+        logger.info(
+            "\t\t%s: R^2 = %.3f +- %.3f",
+            set(coalition),
+            np.mean(r2_seeds),
+            np.std(r2_seeds),
+        )
 
-    shapley_per_seed = []
+    shapley_per_seed: list[dict[str, float]] = []
     for seed_idx in range(n_seeds):
         r2_this_seed = {k: v[seed_idx] for k, v in coalition_r2_seeds.items()}
         shapley_per_seed.append(_shapley_from_coalition_r2(r2_this_seed, feature_names))
@@ -80,18 +88,24 @@ def run_isotope_subgroup_shapley(model_name: str, n_seeds: int = 5) -> dict:
     shapley_std = {
         f: float(np.std([o[f] for o in shapley_per_seed])) for f in feature_names
     }
-    coalition_r2_mean = {k: float(np.mean(v)) for k, v in coalition_r2_seeds.items()}
+    coalition_r2_mean: dict[frozenset[str], float] = {
+        k: float(np.mean(v)) for k, v in coalition_r2_seeds.items()
+    }
     isotope_r2 = coalition_r2_mean[frozenset(feature_names)]
 
     shapley_sum = sum(shapley_mean.values())
     assert abs(shapley_sum - isotope_r2) < 1e-6, (
         f"Efficiency axiom violated for {model_name}: "
-        f"sum(Shapley) = {shapley_sum:.6f}, isotope R2 = {isotope_r2:.6f}"
+        f"sum(Shapley) = {shapley_sum:.6f}, isotope R^2 = {isotope_r2:.6f}"
     )
 
-    print(f"\tIsotope sub-group Shapley (sum = {shapley_sum:.3f}, isotope R2 = {isotope_r2:.3f}):")
+    logger.info(
+        "\tIsotope sub-group Shapley (sum = %.3f, isotope R^2 = %.3f):",
+        shapley_sum,
+        isotope_r2,
+    )
     for f in feature_names:
-        print(f"\t\t{f}: {shapley_mean[f]:.3f} +- {shapley_std[f]:.3f}")
+        logger.info("\t\t%s: %.3f +- %.3f", f, shapley_mean[f], shapley_std[f])
 
     return {
         "shapley": shapley_mean,
@@ -101,7 +115,9 @@ def run_isotope_subgroup_shapley(model_name: str, n_seeds: int = 5) -> dict:
     }
 
 
-def plot_isotope_subgroup_attribution(all_results: dict[str, dict]) -> None:
+def plot_isotope_subgroup_attribution(
+    all_results: dict[str, IsotopeSubgroupResult],
+) -> None:
     """Stacked bar chart of isotope sub-group Shapley values per model."""
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
@@ -134,14 +150,18 @@ def plot_isotope_subgroup_attribution(all_results: dict[str, dict]) -> None:
     out = os.path.join(PLOTS_DIR, "isotope_subgroup_attribution.png")
     fig.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"Saved: {out}")
+    logger.info("Saved: %s", out)
 
 
-def print_subgroup_table(all_results: dict[str, dict]) -> None:
-    """Print isotope sub-group Shapley values (mean +- std) alongside isotope R2."""
+def print_subgroup_table(all_results: dict[str, IsotopeSubgroupResult]) -> None:
+    """Print isotope sub-group Shapley values (mean +- std) alongside isotope R^2."""
     feature_names = list(_ISOTOPE_FEATURES)
     col_w = 20
-    header = f"{'Model':<10}" + "".join(f"  {f:>{col_w}}" for f in feature_names) + f"  {'Isotope R2':>10}"
+    header = (
+        f"{'Model':<10}"
+        + "".join(f"  {f:>{col_w}}" for f in feature_names)
+        + f"  {'Isotope R^2':>10}"
+    )
     print(header)
     print("-" * len(header))
     for model_name, result in all_results.items():
@@ -154,20 +174,21 @@ def print_subgroup_table(all_results: dict[str, dict]) -> None:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     os.makedirs(PLOTS_DIR, exist_ok=True)
 
-    all_results = {}
+    all_results: dict[str, IsotopeSubgroupResult] = {}
     for model_name in MODELS:
-        print(f"=== {model_name} ===")
+        logger.info("=== %s ===", model_name)
         all_results[model_name] = run_isotope_subgroup_shapley(model_name)
 
     print("\nIsotope sub-group Shapley table:")
     print_subgroup_table(all_results)
 
-    print("\nGenerating plot...")
+    logger.info("Generating plot...")
     plot_isotope_subgroup_attribution(all_results)
 
-    print("\nDone.")
+    logger.info("Done.")
 
 
 if __name__ == "__main__":

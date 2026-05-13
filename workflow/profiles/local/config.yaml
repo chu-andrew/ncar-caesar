@@ -1,0 +1,6 @@
+# Local executor profile for swing3 pipeline
+# Usage: snakemake --profile workflow/profiles/local [targets]
+cores: all
+jobs: 1          # one rule at a time at the Snakemake level; parallelism within rules via joblib
+latency-wait: 5
+printshellcmds: true

@@ -16,9 +16,9 @@ def load_omega(model: str, n_times: int | None = None) -> xr.DataArray:
     aligned with other feature arrays.
 
     Coverage at pressure levels for our geographic and temporal area of interest:
-        1000 hPa: 0–36%
-        925 hPa: 71–100%; MIROC (71%) and CAM6 (90%) are thin
-        850 hPa: 88–100%; complete except MIROC (88%)
+        1000 hPa: 0-36%
+        925 hPa: 71-100%; MIROC (71%) and CAM6 (90%) are thin
+        850 hPa: 88-100%; complete except MIROC (88%)
         700 hPa: 100%
     """
     with open_file(OMEGA_MODELS[model], decode_times=False) as ds:

@@ -1,0 +1,9 @@
+variable,long_name,units
+cldh,High-level cloudiness,-
+cldl,Low-level cloudiness,-
+cldm,Mid-level cloudiness,-
+cldt,Total cloudiness,-
+lat,Latitude,degrees_north
+lon,Longitude,degrees_east
+time_centered,Time axis,seconds since 1978-01-01
+time_counter,Time axis,seconds since 1978-01-01
