@@ -94,8 +94,8 @@ def plot_r2_by_stage(all_results: dict[str, dict[str, StagedResult]]) -> None:
     ax.set_xticklabels(
         [s.split(": ", 1)[1] if ": " in s else s for s in stage_names], fontsize=10
     )
-    ax.set_ylabel("Mean test R^2", fontsize=12)
-    ax.set_title("Test R^2 by stage (marginal gain per predictor group)", fontsize=13)
+    ax.set_ylabel("Mean test $R^2$", fontsize=12)
+    ax.set_title("Test $R^2$ by stage (marginal gain per predictor group)", fontsize=13)
     ax.legend(fontsize=9, loc="lower right")
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
@@ -170,6 +170,7 @@ def plot_mcao_dependence(all_results: dict[str, dict[str, StagedResult]]) -> Non
         all_mcao_vals, all_shap_vals = [], []
         for model_name in model_names:
             if stage_name not in all_results[model_name]:
+                plot_data.append((model_name, None, None, None))
                 continue
             result = all_results[model_name][stage_name]
             sv = result["shap_values"]
@@ -190,7 +191,7 @@ def plot_mcao_dependence(all_results: dict[str, dict[str, StagedResult]]) -> Non
             all_shap_vals.append(mcao_shap)
             plot_data.append((model_name, mcao_x, mcao_shap, cloud))
 
-        if not plot_data:
+        if not any(d[1] is not None for d in plot_data):
             continue
 
         x_lo, x_hi = np.percentile(np.concatenate(all_mcao_vals), [0, 100])
@@ -212,6 +213,27 @@ def plot_mcao_dependence(all_results: dict[str, dict[str, StagedResult]]) -> Non
         for idx, (model_name, mcao_x, mcao_shap, cloud) in enumerate(plot_data):
             ax = axes_flat[idx]
             _, col = divmod(idx, n_cols)
+
+            if mcao_x is None:
+                ax.set_title(model_name, fontsize=16)
+                ax.text(
+                    0.5,
+                    0.5,
+                    "not available",
+                    transform=ax.transAxes,
+                    ha="center",
+                    va="center",
+                    color="gray",
+                    fontsize=11,
+                )
+                ax.set_xlim(x_lo, x_hi)
+                ax.set_ylim(y_lo, y_hi)
+                ax.grid(True, alpha=0.3)
+                if idx >= (n_rows_stage - 1) * n_cols:
+                    ax.set_xlabel("MCAO (K)", fontsize=12)
+                if col == 0:
+                    ax.set_ylabel("SHAP value for MCAO", fontsize=12)
+                continue
 
             if cloud is not None:
                 sc = ax.scatter(
@@ -509,9 +531,10 @@ def plot_spatial_residuals(all_results: dict[str, dict[str, StagedResult]]) -> N
 
     im_last = None
     for idx, model_name in enumerate(model_names):
-        ax = axes[idx // n_cols, idx % n_cols]
+        row, col = idx // n_cols, idx % n_cols
+        ax = axes[row, col]
         lat, lon, res_map = residual_maps[model_name]
-        setup_map(ax)
+        setup_map(ax, left_labels=(col == 0), bottom_labels=(row == n_rows - 1))
         im_last = ax.pcolormesh(
             lon,
             lat,

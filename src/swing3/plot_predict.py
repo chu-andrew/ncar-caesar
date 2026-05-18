@@ -240,14 +240,14 @@ def compute_spatial_pe_maps(
         pred_mean = np.where(covered, pred_sum / count, np.nan)
         true_mean = np.where(covered, true_sum / count, np.nan)
 
-    return lat_vals, lon_vals, true_mean, pred_mean, pred_mean - true_mean
+    return lat_vals, lon_vals, true_mean, pred_mean, true_mean - pred_mean
 
 
 def plot_spatial_pe_comparison(all_results: dict[str, TemporalResult]) -> None:
     """Spatial mean PE maps for the test period: actual | predicted | bias.
 
     One row per model, three columns: actual PE, predicted PE, and
-    predicted minus actual. Actual and predicted share a color scale;
+    actual minus predicted. Actual and predicted share a color scale;
     the bias panel uses a symmetric diverging scale.
     """
     models = [m for m in MODELS if m in all_results]
@@ -278,7 +278,7 @@ def plot_spatial_pe_comparison(all_results: dict[str, TemporalResult]) -> None:
         squeeze=False,
     )
 
-    col_labels = ["Actual PE (%)", "Predicted PE (%)", "Predicted - Actual (%)"]
+    col_labels = ["Actual PE (%)", "Predicted PE (%)", "Actual - Predicted (%)"]
     col_cmaps = ["inferno", "inferno", "RdBu_r"]
     col_norms = [pe_norm, pe_norm, diff_norm]
 

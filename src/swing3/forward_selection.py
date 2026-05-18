@@ -53,7 +53,11 @@ def run_stability_forward_selection(
     """
     logger.info("[%s] Loading features...", model_name)
     features, target, groups = load_shap_features(model_name)
-    all_features = [c for c in features.columns if c not in _SELECTION_EXCLUDED]
+    all_features = [
+        c
+        for c in features.columns
+        if c not in _SELECTION_EXCLUDED and features[c].notna().any()
+    ]
 
     selected: list[str] = []
     remaining: list[str] = list(all_features)
