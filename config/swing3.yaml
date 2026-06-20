@@ -1,0 +1,27 @@
+# Swing3 pipeline configuration
+# Override any value with --config key=value on the command line.
+
+# Output root (relative to project root)
+output_dir: output/swing3
+
+# Plot output root
+plots_dir: output/swing3/plots
+
+# Models to run (subset of all 7 for quick testing)
+models:
+  - CAM5
+  - CAM6
+  - ECHAM
+  - GISS
+  - GSM
+  - LMDZ
+  - MIROC
+
+# ExperimentConfig overrides
+n_seeds: 10
+n_optuna_trials: 20
+n_folds: 5
+early_stopping_rounds: 20
+n_estimators: 500
+temporal_cutoff: 2012
+hparam_val_size: 0.3

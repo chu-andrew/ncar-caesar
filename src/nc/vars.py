@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from nc.remote import SWING3_DATA
-
 
 @dataclass(frozen=True)
 class _Ds638001Vars:
@@ -67,6 +65,22 @@ class _Swing3Vars:
     precip_efficiency: str = "pref"
     lat: str = "lat"
     lon: str = "lon"
+    specific_humidity: str = "q"
+    surface_specific_humidity: str = "sh"
+    precipitable_water: str = "qvsum"
+    surface_temperature: str = "ts"
+    surface_pressure: str = "ps"
+    u_wind: str = "u"
+    v_wind: str = "v"
+    moisture_flux_u: str = "iuq"
+    moisture_flux_v: str = "ivq"
+    precipitation: str = "pr"
+    evaporation: str = "ev"
+    dD_vapor: str = "dD"
+    dD_precip: str = "dDp"
+    dexcess_precip: str = "dexcessp"
+    dD_surface: str = "dDs"
+    dexcess_surface: str = "dexcesss"
 
 
 @dataclass(frozen=True)

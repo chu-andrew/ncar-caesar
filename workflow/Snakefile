@@ -1,0 +1,223 @@
+"""Swing3 PE analysis pipeline.
+
+Usage (from project root):
+  snakemake --profile workflow/profiles/local --configfile config/swing3.yaml
+
+Single-model smoke test:
+  snakemake --profile workflow/profiles/local --configfile config/swing3.yaml \
+    --config models=[CAM6] n_seeds=2 n_optuna_trials=5
+
+All targets:
+  snakemake --profile workflow/profiles/local --configfile config/swing3.yaml all
+"""
+
+import sys
+sys.path.insert(0, "src")
+
+configfile: "config/swing3.yaml"
+
+MODELS = config["models"]
+OUT = config["output_dir"]
+PLOTS_OUT = config.get("plots_dir", "output/swing3/plots")
+
+
+rule all:
+    input:
+        # Diagnostic plots (raw model data, no ML dependency)
+        f"{PLOTS_OUT}/diagnostics/.done",
+        # Staged analysis
+        expand(f"{OUT}/{{model}}/staged.pkl", model=MODELS),
+        # Forward selection
+        expand(f"{OUT}/{{model}}/fwd_sel.pkl", model=MODELS),
+        # Group Shapley (baseline + dDp sensitivity)
+        expand(f"{OUT}/{{model}}/group_shapley.pkl", model=MODELS),
+        expand(f"{OUT}/{{model}}/group_shapley_no_ddp.pkl", model=MODELS),
+        # Isotope decomposition
+        expand(f"{OUT}/{{model}}/isotope_subgroup.pkl", model=MODELS),
+        expand(f"{OUT}/{{model}}/isotope_only.pkl", model=MODELS),
+        # Temporal holdout + OOS predictions
+        expand(f"{OUT}/{{model}}/temporal_prediction.pkl", model=MODELS),
+        expand(f"{OUT}/{{model}}/oos_predictions.pkl", model=MODELS),
+        # dDp circularity check
+        expand(f"{OUT}/{{model}}/forward_model.pkl", model=MODELS),
+        # Plot sentinels
+        expand(f"{PLOTS_OUT}/shap/snakemake/{{model}}/.done", model=MODELS),
+        f"{PLOTS_OUT}/shap/.done",
+        f"{PLOTS_OUT}/predict/.done",
+        f"{PLOTS_OUT}/forward_selection/.done",
+        f"{PLOTS_OUT}/group_shapley/.done",
+        f"{PLOTS_OUT}/isotope_subgroup/.done",
+        f"{PLOTS_OUT}/shap/isotope/.done",
+        f"{PLOTS_OUT}/mcao_pe/.done",
+        f"{PLOTS_OUT}/clouds/.done",
+
+
+rule staged_analysis:
+    output:
+        f"{OUT}/{{model}}/staged.pkl"
+    script:
+        "../src/swing3/rules/staged_analysis.py"
+
+
+rule forward_selection:
+    output:
+        f"{OUT}/{{model}}/fwd_sel.pkl"
+    script:
+        "../src/swing3/rules/forward_selection.py"
+
+
+rule group_shapley:
+    output:
+        f"{OUT}/{{model}}/group_shapley.pkl"
+    script:
+        "../src/swing3/rules/group_shapley.py"
+
+
+rule group_shapley_no_ddp:
+    output:
+        f"{OUT}/{{model}}/group_shapley_no_ddp.pkl"
+    script:
+        "../src/swing3/rules/group_shapley_no_ddp.py"
+
+
+rule isotope_subgroup:
+    output:
+        f"{OUT}/{{model}}/isotope_subgroup.pkl"
+    script:
+        "../src/swing3/rules/isotope_subgroup.py"
+
+
+rule isotope_only:
+    output:
+        f"{OUT}/{{model}}/isotope_only.pkl"
+    script:
+        "../src/swing3/rules/isotope_only.py"
+
+
+rule temporal_prediction:
+    input:
+        f"{OUT}/{{model}}/fwd_sel.pkl"
+    output:
+        f"{OUT}/{{model}}/temporal_prediction.pkl"
+    script:
+        "../src/swing3/rules/temporal_prediction.py"
+
+
+rule oos_predictions:
+    output:
+        f"{OUT}/{{model}}/oos_predictions.pkl"
+    script:
+        "../src/swing3/rules/oos_predictions.py"
+
+
+rule forward_model:
+    output:
+        f"{OUT}/{{model}}/forward_model.pkl"
+    script:
+        "../src/swing3/rules/forward_model.py"
+
+
+rule plot_shap:
+    input:
+        staged=f"{OUT}/{{model}}/staged.pkl",
+        oos=f"{OUT}/{{model}}/oos_predictions.pkl",
+        forward_model=f"{OUT}/{{model}}/forward_model.pkl",
+    output:
+        touch(f"{PLOTS_OUT}/shap/snakemake/{{model}}/.done")
+    script:
+        "../src/swing3/rules/plot_shap.py"
+
+
+rule plot_shap_combined:
+    input:
+        staged=expand(f"{OUT}/{{model}}/staged.pkl", model=MODELS),
+        oos=expand(f"{OUT}/{{model}}/oos_predictions.pkl", model=MODELS),
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/shap/.done")
+    script:
+        "../src/swing3/rules/plot_shap_combined.py"
+
+
+rule plot_predict:
+    input:
+        predictions=expand(f"{OUT}/{{model}}/temporal_prediction.pkl", model=MODELS),
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/predict/.done")
+    script:
+        "../src/swing3/rules/plot_predict.py"
+
+
+rule plot_forward_selection:
+    input:
+        fwd_sel=expand(f"{OUT}/{{model}}/fwd_sel.pkl", model=MODELS),
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/forward_selection/.done")
+    script:
+        "../src/swing3/rules/plot_forward_selection.py"
+
+
+rule plot_group_shapley:
+    input:
+        group_shapley=expand(f"{OUT}/{{model}}/group_shapley.pkl", model=MODELS),
+        group_shapley_no_ddp=expand(f"{OUT}/{{model}}/group_shapley_no_ddp.pkl", model=MODELS),
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/group_shapley/.done")
+    script:
+        "../src/swing3/rules/plot_group_shapley.py"
+
+
+rule plot_isotope_subgroup:
+    input:
+        results=expand(f"{OUT}/{{model}}/isotope_subgroup.pkl", model=MODELS),
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/isotope_subgroup/.done")
+    script:
+        "../src/swing3/rules/plot_isotope_subgroup.py"
+
+
+rule plot_isotope_only:
+    input:
+        isotope_only=expand(f"{OUT}/{{model}}/isotope_only.pkl", model=MODELS),
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/shap/isotope/.done")
+    script:
+        "../src/swing3/rules/plot_isotope_only.py"
+
+
+rule plot_mcao_pe:
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/mcao_pe/.done")
+    script:
+        "../src/swing3/rules/plot_mcao_pe.py"
+
+
+rule plot_clouds:
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/clouds/.done")
+    script:
+        "../src/swing3/rules/plot_clouds.py"
+
+
+rule plot_diagnostics:
+    params:
+        models=MODELS,
+    output:
+        touch(f"{PLOTS_OUT}/diagnostics/.done")
+    script:
+        "../src/swing3/rules/plot_diagnostics.py"

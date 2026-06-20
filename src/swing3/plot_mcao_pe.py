@@ -10,7 +10,7 @@ from nc.remote import SWING3_MODELS
 from swing3.models import HEX_VARS, load_mcao_pe_hex
 from swing3.sst import load_sst
 
-PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/swing3/plots/mcao_pe")
 MODELS = list(SWING3_MODELS.keys())
 
 
@@ -139,7 +139,8 @@ def plot_hexbin_by_model(
         counts = hb.get_array()
         hb.set_array(counts / counts.sum())
 
-        all_hb[caesar_idx] = hb
+        # CAESAR uses a different y-axis (ln(S/LWP) vs PE %) and different spatial
+        # extent, so it is excluded from the shared model color scale computation.
         ax.grid(True, alpha=0.4, color="white")
         ax.set_xlim(c_mcao_lim)
         ax.set_ylim(c_pe_lim)
@@ -149,10 +150,12 @@ def plot_hexbin_by_model(
         ax.set_xlabel("MCAO (K)", fontsize=11)
         ax.set_ylabel(r"$\ln$(S/LWP) (hr$^{-1}$)", fontsize=11, labelpad=-2)
 
+        caesar_hb = hb
+
     for idx in range(n_panels, n_rows * n_cols):
         axes[divmod(idx, n_cols)].set_visible(False)
 
-    # Shared color scale
+    # Shared color scale computed from model panels only (excludes CAESAR).
     if all_hb:
         if color_key is None:
             vmin = 0
@@ -168,10 +171,12 @@ def plot_hexbin_by_model(
 
         for hb in all_hb.values():
             hb.set_clim(vmin, vmax)
+        if caesar is not None and color_key is None:
+            caesar_hb.set_clim(vmin, vmax)
 
         fig.subplots_adjust(right=0.90, top=0.90, hspace=0.30)
         cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.70])
-        fig.colorbar(all_hb[n_panels - 1], cax=cbar_ax, label=cbar_label)
+        fig.colorbar(all_hb[len(models) - 1], cax=cbar_ax, label=cbar_label)
 
     title = (
         f"PE vs MCAO colored by {color_label[0].lower() + color_label[1:]}"

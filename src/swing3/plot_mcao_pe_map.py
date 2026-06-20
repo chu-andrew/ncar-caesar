@@ -13,11 +13,13 @@ from swing3.models import load_mcao_pe_clim
 from swing3.sst import load_sst
 from nc.vars import SWING3 as v_swing3
 
-PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/plots")
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "output/swing3/plots/mcao_pe")
 MODELS = list(SWING3_MODELS.keys())
 
 
-def setup_map(ax: plt.Axes) -> None:
+def setup_map(
+    ax: plt.Axes, left_labels: bool = True, bottom_labels: bool = True
+) -> None:
     ax.add_feature(cfeature.OCEAN.with_scale("50m"), facecolor=cfeature.COLORS["water"])
     ax.add_feature(cfeature.LAND.with_scale("50m"), facecolor=cfeature.COLORS["land"])
     ax.add_feature(cfeature.COASTLINE.with_scale("50m"), linewidth=1)
@@ -25,6 +27,8 @@ def setup_map(ax: plt.Axes) -> None:
     gl = ax.gridlines(draw_labels=True, linewidth=0.5, alpha=0.6)
     gl.top_labels = False
     gl.right_labels = False
+    gl.left_labels = left_labels
+    gl.bottom_labels = bottom_labels
     ax.set_extent(
         [bounds["MIN_LON"], bounds["MAX_LON"], bounds["MIN_LAT"], bounds["MAX_LAT"]],
         crs=ccrs.PlateCarree(),
@@ -66,7 +70,7 @@ def make_figure(
         subplot_kw={"projection": proj},
     )
     fig.suptitle(
-        f"WisoMIP Mean {title} (Jan–Apr)",
+        f"WisoMIP Mean {title} (Jan-Apr)",
         fontsize=18,
     )
 
@@ -104,7 +108,7 @@ def main() -> None:
         mcao_clim, pe_clim = load_mcao_pe_clim(model, sst_da=sst_da)
         all_data[model] = (mcao_clim, pe_clim)
 
-    # shared color limits from all models (1st–99th percentile)
+    # shared color limits from all models (1st-99th percentile)
     all_mcao = np.stack([d[0].values for d in all_data.values()])
     all_pe = np.stack([d[1].values for d in all_data.values()])
 

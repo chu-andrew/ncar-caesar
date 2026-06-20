@@ -356,7 +356,7 @@ def main():
     sd_mean = aggregate_size_distribution(
         concentration, bin_centers, bin_widths, method="mean"
     )
-    stats = compute_distribution_statistics(concentration, bin_centers, bin_widths)
+    compute_distribution_statistics(concentration, bin_centers, bin_widths)
 
     wvp_binned = bin_by_water_path(df, variable="WVP", n_bins=5, method="quantile")
     lwp_binned = bin_by_water_path(df, variable="LWP", n_bins=5, method="quantile")

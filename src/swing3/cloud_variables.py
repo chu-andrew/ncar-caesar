@@ -6,7 +6,7 @@ from nc.remote import CLOUD_DIR, SWING3_MODELS
 from nc.loader import list_dir_files, PROJECT_ROOT
 from nc.variables import export_variable_groups
 
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output/remote/swing3/variables/cloud")
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output/swing3/variables/cloud")
 MODELS = list(SWING3_MODELS.keys())
 
 

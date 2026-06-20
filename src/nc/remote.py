@@ -12,6 +12,17 @@ SWING3_DATA = WISONET_DATA / "SWING3"
 
 CLOUD_DIR = SWING3_DATA / "cloud"
 
+OMEGA_DIR = SWING3_DATA / "omega"
+OMEGA_MODELS = {
+    "CAM5": OMEGA_DIR / "omega_Total.CAM5_Monthly.nc",
+    "CAM6": OMEGA_DIR / "omega_Total.CAM6_Monthly.nc",
+    "ECHAM": OMEGA_DIR / "omega_Total.ECHAM_Monthly.nc",
+    "GISS": OMEGA_DIR / "omega_Total.GISS_Monthly.nc",
+    "GSM": OMEGA_DIR / "omega_Total.GSM_Monthly.nc",
+    "LMDZ": OMEGA_DIR / "omega_Total.LMDZ_Monthly.nc",
+    "MIROC": OMEGA_DIR / "omega_Total.MIROC_Monthly.nc",
+}
+
 ERA5_DATA = SWING3_DATA / "ERA5"
 ERA5_SST = ERA5_DATA / "SST" / "sst_all.nc"
 
